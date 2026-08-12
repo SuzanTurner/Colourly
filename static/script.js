@@ -710,12 +710,450 @@ function rgbToCmyk(r, g, b) {
 
 }
 
-
 /* =================================
-   COLOUR RECIPE
+   ARTIST COLOUR MIXING RECIPE
 ================================= */
 
 function generateRecipe(r, g, b) {
+
+    const hsv = rgbToHsv(r, g, b);
+
+    const h = hsv.h;
+    const s = hsv.s;
+    const v = hsv.v;
+
+
+    /*
+     * =================================
+     * SPECIAL CASES
+     * =================================
+     */
+
+    if (v <= 0.01) {
+
+        setRecipeValues(
+            0,
+            0,
+            0,
+            0,
+            100
+        );
+
+        recipeText.textContent =
+            "Pure black. Use black pigment as the base.";
+
+        return;
+    }
+
+
+    if (s <= 0.01 && v >= 0.99) {
+
+        setRecipeValues(
+            0,
+            0,
+            0,
+            100,
+            0
+        );
+
+        recipeText.textContent =
+            "Pure white. Use white pigment as the base.";
+
+        return;
+    }
+
+
+    /*
+     * =================================
+     * RYB HUE MIX
+     * =================================
+     *
+     * Determine which primary pigments
+     * are responsible for the hue.
+     *
+     * Red
+     * Yellow
+     * Blue
+     */
+
+    let red = 0;
+    let yellow = 0;
+    let blue = 0;
+
+
+    /*
+     * RED → YELLOW
+     */
+
+    if (h < 60) {
+
+        const t = h / 60;
+
+        red = 1 - t;
+        yellow = t;
+
+    }
+
+
+    /*
+     * YELLOW → GREEN
+     *
+     * Green is produced through
+     * yellow + blue.
+     */
+
+    else if (h < 120) {
+
+        const t =
+            (h - 60) / 60;
+
+        yellow = 1 - t;
+        blue = t;
+
+    }
+
+
+    /*
+     * GREEN → BLUE
+     */
+
+    else if (h < 240) {
+
+        const t =
+            (h - 120) / 120;
+
+        yellow =
+            0.35 * (1 - t);
+
+        blue =
+            0.65 + (0.35 * t);
+
+    }
+
+
+    /*
+     * BLUE → VIOLET
+     */
+
+    else if (h < 300) {
+
+        const t =
+            (h - 240) / 60;
+
+        blue = 1 - t;
+        red = t;
+
+    }
+
+
+    /*
+     * VIOLET → RED
+     */
+
+    else {
+
+        const t =
+            (h - 300) / 60;
+
+        red =
+            0.65 + (0.35 * t);
+
+        blue =
+            0.35 * (1 - t);
+
+    }
+
+
+    /*
+     * =================================
+     * DESATURATION
+     * =================================
+     *
+     * A real-looking paint recipe needs
+     * a way to mute colours.
+     *
+     * Instead of falsely claiming that
+     * "red + yellow = this exact colour",
+     * we introduce:
+     *
+     * - white for lighter muted colours
+     * - black for darker muted colours
+     * - complementary pigment for earthy/
+     *   neutralised colours
+     */
+
+    const desaturation =
+        1 - s;
+
+
+    /*
+     * WHITE
+     *
+     * More useful for light colours.
+     */
+
+    let white =
+        desaturation *
+        v *
+        0.35;
+
+
+    /*
+     * BLACK
+     *
+     * Used both for desaturation and
+     * naturally dark colours.
+     */
+
+    let black =
+        desaturation *
+        (1 - v) *
+        0.45;
+
+
+    /*
+     * Additional black for genuinely
+     * dark colours.
+     */
+
+    if (v < 0.55) {
+
+        black +=
+            (0.55 - v) *
+            0.25;
+
+    }
+
+
+    /*
+     * =================================
+     * COMPLEMENTARY PIGMENT
+     * =================================
+     *
+     * A small amount of the opposing
+     * primary helps create muted/earthy
+     * colours.
+     *
+     * This is particularly important
+     * for colours such as:
+     *
+     * olive
+     * ochre
+     * dusty blue
+     * muted purple
+     * earthy green
+     */
+
+    let complementary =
+        desaturation *
+        0.20;
+
+
+    /*
+     * Determine which pigment is useful
+     * as the neutralising pigment.
+     */
+
+    if (h < 60) {
+
+        /*
+         * Yellow/orange → blue
+         */
+
+        blue += complementary;
+
+    }
+
+    else if (h < 120) {
+
+        /*
+         * Yellow/green → red
+         */
+
+        red += complementary;
+
+    }
+
+    else if (h < 240) {
+
+        /*
+         * Green/blue → red/yellow
+         */
+
+        red +=
+            complementary * 0.5;
+
+        yellow +=
+            complementary * 0.5;
+
+    }
+
+    else if (h < 300) {
+
+        /*
+         * Blue/violet → yellow
+         */
+
+        yellow += complementary;
+
+    }
+
+    else {
+
+        /*
+         * Violet/red → yellow
+         */
+
+        yellow += complementary;
+
+    }
+
+
+    /*
+     * =================================
+     * CALCULATE BASE PIGMENT AMOUNT
+     * =================================
+     *
+     * White + black + complementary
+     * consume part of the mixture.
+     */
+
+    const modifierAmount =
+        white +
+        black;
+
+
+    /*
+     * The remaining percentage is
+     * assigned to the hue pigments.
+     */
+
+    const baseAmount =
+        Math.max(
+            0,
+            1 - modifierAmount
+        );
+
+
+    /*
+     * Calculate total hue pigment weight.
+     */
+
+    const hueTotal =
+        red +
+        yellow +
+        blue;
+
+
+    /*
+     * Scale hue pigments into the
+     * remaining mixture.
+     */
+
+    if (hueTotal > 0) {
+
+        red =
+            (red / hueTotal) *
+            baseAmount;
+
+        yellow =
+            (yellow / hueTotal) *
+            baseAmount;
+
+        blue =
+            (blue / hueTotal) *
+            baseAmount;
+
+    }
+
+
+    /*
+     * =================================
+     * CONVERT TO PERCENTAGES
+     * =================================
+     */
+
+    const rawValues = [
+
+        red * 100,
+        yellow * 100,
+        blue * 100,
+        white * 100,
+        black * 100
+
+    ];
+
+
+    /*
+     * =================================
+     * ROUND WHILE GUARANTEEING 100%
+     * =================================
+     */
+
+    const percentages =
+        normalizeTo100(
+            rawValues
+        );
+
+
+    const redPercent =
+        percentages[0];
+
+    const yellowPercent =
+        percentages[1];
+
+    const bluePercent =
+        percentages[2];
+
+    const whitePercent =
+        percentages[3];
+
+    const blackPercent =
+        percentages[4];
+
+
+    /*
+     * =================================
+     * UPDATE UI
+     * =================================
+     */
+
+    setRecipeValues(
+        redPercent,
+        yellowPercent,
+        bluePercent,
+        whitePercent,
+        blackPercent
+    );
+
+
+    /*
+     * =================================
+     * ARTIST DESCRIPTION
+     * =================================
+     */
+
+    generateRecipeDescription(
+        redPercent,
+        yellowPercent,
+        bluePercent,
+        whitePercent,
+        blackPercent
+    );
+
+}
+
+
+/* =================================
+   RGB → HSV
+================================= */
+
+function rgbToHsv(r, g, b) {
+
+    r /= 255;
+    g /= 255;
+    b /= 255;
+
 
     const max =
         Math.max(
@@ -733,242 +1171,369 @@ function generateRecipe(r, g, b) {
         );
 
 
-    /*
-     * Calculate approximate
-     * pigment proportions.
-     */
+    const difference =
+        max - min;
 
-    let red = 0;
-    let yellow = 0;
-    let blue = 0;
-    let white = 0;
-    let black = 0;
 
+    let h = 0;
 
-    /*
-     * Black component
-     */
 
-    if (max < 128) {
+    if (difference !== 0) {
 
-        black =
-            Math.round(
-                ((255 - max) / 255) * 100
-            );
+        if (max === r) {
 
-    }
+            h =
+                60 *
+                (
+                    ((g - b) / difference) % 6
+                );
 
+        }
 
-    /*
-     * White component
-     */
+        else if (max === g) {
 
-    if (min > 180) {
-
-        white =
-            Math.round(
-                (min / 255) * 100
-            );
-
-    }
-
-
-    /*
-     * Primary colour proportions
-     */
-
-    const adjustedR =
-        Math.max(
-            0,
-            r - min
-        );
-
-
-    const adjustedG =
-        Math.max(
-            0,
-            g - min
-        );
-
-
-    const adjustedB =
-        Math.max(
-            0,
-            b - min
-        );
-
-
-    const primaryTotal =
-        adjustedR +
-        adjustedG +
-        adjustedB;
-
-
-    if (primaryTotal > 0) {
-
-        red =
-            Math.round(
-                (adjustedR / primaryTotal) * 100
-            );
-
-
-        yellow =
-            Math.round(
-                (adjustedG / primaryTotal) * 100
-            );
-
-
-        blue =
-            Math.round(
-                (adjustedB / primaryTotal) * 100
-            );
-
-    }
-
-
-    /*
-     * Make percentages visually useful.
-     */
-
-    if (max > 200) {
-
-        white =
-            Math.max(
-                white,
-                Math.round(
-                    (max - 180) / 75 * 100
-                )
-            );
-
-    }
-
-
-    if (max < 80) {
-
-        black =
-            Math.max(
-                black,
-                Math.round(
-                    (80 - max) / 80 * 100
-                )
-            );
-
-    }
-
-
-    /*
-     * Update UI
-     */
-
-    document.getElementById(
-        "red-percent"
-    ).textContent =
-        `${Math.min(red, 100)}%`;
-
-
-    document.getElementById(
-        "yellow-percent"
-    ).textContent =
-        `${Math.min(yellow, 100)}%`;
-
-
-    document.getElementById(
-        "blue-percent"
-    ).textContent =
-        `${Math.min(blue, 100)}%`;
-
-
-    document.getElementById(
-        "white-percent"
-    ).textContent =
-        `${Math.min(white, 100)}%`;
-
-
-    document.getElementById(
-        "black-percent"
-    ).textContent =
-        `${Math.min(black, 100)}%`;
-
-
-    /*
-     * Human-readable explanation
-     */
-
-    let description = "";
-
-
-    if (
-        r > g * 1.25 &&
-        r > b * 1.25
-    ) {
-
-        description =
-            "Start with a strong red base. Add a small amount of yellow to warm the colour, then adjust with white to create a lighter shade or black for a deeper tone.";
-
-    }
-
-
-    else if (
-        r > b &&
-        g > b
-    ) {
-
-        description =
-            "Start with red and yellow to create a warm orange base. Increase red for a richer tone, or add white to make the colour softer and lighter.";
-
-    }
-
-
-    else if (
-        g > r &&
-        g > b
-    ) {
-
-        description =
-            "Start with yellow and blue to create the green base. Add more yellow for a warmer green or blue for a deeper, cooler shade.";
-
-    }
-
-
-    else if (
-        b > r &&
-        b > g
-    ) {
-
-        description =
-            "Start with blue as the dominant colour. Add red to move toward violet, or add white to create a softer and lighter blue.";
-
-    }
-
-
-    else if (
-        Math.abs(r - g) < 15 &&
-        Math.abs(g - b) < 15
-    ) {
-
-        if (max > 180) {
-
-            description =
-                "This is a light neutral shade. Start with white and add a very small amount of black to reduce its brightness.";
+            h =
+                60 *
+                (
+                    ((b - r) / difference) + 2
+                );
 
         }
 
         else {
 
-            description =
-                "This is a neutral darker shade. Start with black and gradually introduce white until you reach the desired brightness.";
+            h =
+                60 *
+                (
+                    ((r - g) / difference) + 4
+                );
 
         }
 
     }
 
 
-    else {
+    if (h < 0) {
+        h += 360;
+    }
 
-        description =
-            "This colour is a balanced mixture of primary tones. Adjust the dominant colour first, then use white to lighten or black to deepen the final shade.";
+
+    const s =
+        max === 0
+            ? 0
+            : difference / max;
+
+
+    const v = max;
+
+
+    return {
+        h,
+        s,
+        v
+    };
+
+}
+
+
+/* =================================
+   NORMALIZE TO EXACTLY 100%
+================================= */
+
+function normalizeTo100(values) {
+
+    /*
+     * Remove negative values.
+     */
+
+    const cleaned =
+        values.map(
+            value =>
+                Math.max(
+                    0,
+                    value
+                )
+        );
+
+
+    /*
+     * Floor everything first.
+     */
+
+    const result =
+        cleaned.map(
+            value =>
+                Math.floor(value)
+        );
+
+
+    /*
+     * Calculate how many percentage
+     * points are still missing.
+     */
+
+    let remainder =
+        100 -
+        result.reduce(
+            (sum, value) =>
+                sum + value,
+            0
+        );
+
+
+    /*
+     * Keep the fractional parts so
+     * the rounding error goes to the
+     * values that deserve it.
+     */
+
+    const fractions =
+        cleaned
+            .map(
+                (value, index) => ({
+
+                    index,
+
+                    fraction:
+                        value -
+                        Math.floor(value)
+
+                })
+            )
+            .sort(
+                (a, b) =>
+                    b.fraction -
+                    a.fraction
+            );
+
+
+    /*
+     * Distribute remaining percentage
+     * points.
+     */
+
+    let i = 0;
+
+
+    while (
+        remainder > 0
+    ) {
+
+        result[
+            fractions[
+                i %
+                fractions.length
+            ].index
+        ]++;
+
+
+        remainder--;
+        i++;
 
     }
+
+
+    return result;
+
+}
+
+
+/* =================================
+   UPDATE RECIPE UI
+================================= */
+
+function setRecipeValues(
+    red,
+    yellow,
+    blue,
+    white,
+    black
+) {
+
+    document.getElementById(
+        "red-percent"
+    ).textContent =
+        `${red}%`;
+
+
+    document.getElementById(
+        "yellow-percent"
+    ).textContent =
+        `${yellow}%`;
+
+
+    document.getElementById(
+        "blue-percent"
+    ).textContent =
+        `${blue}%`;
+
+
+    document.getElementById(
+        "white-percent"
+    ).textContent =
+        `${white}%`;
+
+
+    document.getElementById(
+        "black-percent"
+    ).textContent =
+        `${black}%`;
+
+}
+
+
+/* =================================
+   ARTIST-FRIENDLY DESCRIPTION
+================================= */
+
+function generateRecipeDescription(
+    red,
+    yellow,
+    blue,
+    white,
+    black
+) {
+
+    const ingredients = [];
+
+
+    /*
+     * Find largest pigment.
+     */
+
+    const pigments = [
+
+        {
+            name: "red",
+            value: red
+        },
+
+        {
+            name: "yellow",
+            value: yellow
+        },
+
+        {
+            name: "blue",
+            value: blue
+        },
+
+        {
+            name: "white",
+            value: white
+        },
+
+        {
+            name: "black",
+            value: black
+        }
+
+    ];
+
+
+    pigments.sort(
+        (a, b) =>
+            b.value - a.value
+    );
+
+
+    const main =
+        pigments[0];
+
+
+    /*
+     * Main instruction.
+     */
+
+    let description =
+        `Start with ${main.name} as the base.`;
+
+
+    /*
+     * Secondary pigments.
+     */
+
+    const secondary =
+        pigments
+            .slice(1)
+            .filter(
+                pigment =>
+                    pigment.value >= 5
+            );
+
+
+    if (
+        secondary.length > 0
+    ) {
+
+        description +=
+            ` Gradually add ${secondary
+                .map(
+                    pigment =>
+                        pigment.name
+                )
+                .join(" and ")}.`;
+
+    }
+
+
+    /*
+     * Practical adjustment advice.
+     */
+
+    if (
+        white >= 20
+    ) {
+
+        description +=
+            " Use white to build the lighter value gradually.";
+
+    }
+
+
+    if (
+        black >= 20
+    ) {
+
+        description +=
+            " Add black sparingly because it can quickly overpower the mixture.";
+
+    }
+
+
+    if (
+        blue >= 10 &&
+        yellow >= 10 &&
+        red < 10
+    ) {
+
+        description +=
+            " The blue and yellow combination helps create the green character of the shade.";
+
+    }
+
+
+    if (
+        yellow >= 20 &&
+        red >= 10 &&
+        blue >= 5
+    ) {
+
+        description +=
+            " The small amount of blue helps mute the warm yellow/red base into a more earthy shade.";
+
+    }
+
+
+    /*
+     * IMPORTANT DISCLAIMER
+     *
+     * This is not pretending to be an
+     * exact physical pigment formula.
+     */
+
+    description +=
+        " These are approximate starting proportions; adjust by eye because real pigments vary.";
 
 
     recipeText.textContent =
