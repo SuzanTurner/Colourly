@@ -1,10 +1,16 @@
 const imageInput = document.getElementById("image-input");
+const anotherImageInput = document.getElementById("another-image-input");
+
 const dropZone = document.getElementById("drop-zone");
-
 const editor = document.getElementById("editor");
-const canvas = document.getElementById("image-canvas");
 
-const ctx = canvas.getContext("2d");
+const initialUpload = document.getElementById("initial-upload");
+const anotherUpload = document.getElementById("another-upload");
+
+const canvas = document.getElementById("image-canvas");
+const ctx = canvas.getContext("2d", {
+    willReadFrequently: true
+});
 
 const colorPreview = document.getElementById("color-preview");
 
@@ -15,10 +21,18 @@ const cmykValue = document.getElementById("cmyk-value");
 
 const recipeText = document.getElementById("recipe-text");
 
+const pickerIndicator = document.getElementById("picker-indicator");
+const pickerRgb = document.getElementById("picker-rgb");
 
-/* --------------------------------
-   Image Upload
--------------------------------- */
+const palette = document.getElementById("palette");
+const copyPaletteButton = document.getElementById("copy-palette");
+
+let currentPalette = [];
+
+
+/* =================================
+   IMAGE UPLOAD
+================================= */
 
 imageInput.addEventListener("change", function () {
 
@@ -31,11 +45,62 @@ imageInput.addEventListener("change", function () {
 });
 
 
-/* --------------------------------
-   Load Image
--------------------------------- */
+anotherImageInput.addEventListener("change", function () {
+
+    const file = this.files[0];
+
+    if (file) {
+        loadImage(file);
+    }
+
+});
+
+
+/* =================================
+   DRAG & DROP
+================================= */
+
+dropZone.addEventListener("dragover", function (event) {
+
+    event.preventDefault();
+
+    dropZone.classList.add("dragging");
+
+});
+
+
+dropZone.addEventListener("dragleave", function () {
+
+    dropZone.classList.remove("dragging");
+
+});
+
+
+dropZone.addEventListener("drop", function (event) {
+
+    event.preventDefault();
+
+    dropZone.classList.remove("dragging");
+
+    const file = event.dataTransfer.files[0];
+
+    if (file && file.type.startsWith("image/")) {
+        loadImage(file);
+    }
+
+});
+
+
+/* =================================
+   LOAD IMAGE
+================================= */
 
 function loadImage(file) {
+
+    if (file.size > 10 * 1024 * 1024) {
+        alert("Please choose an image smaller than 10MB.");
+        return;
+    }
 
     const image = new Image();
 
@@ -46,29 +111,59 @@ function loadImage(file) {
 
         ctx.drawImage(image, 0, 0);
 
-        dropZone.classList.add("hidden");
-        editor.classList.remove("hidden");
+        initialUpload.classList.add("hidden");
 
+        editor.classList.remove("hidden");
+        anotherUpload.classList.remove("hidden");
+
+        pickerIndicator.classList.add("hidden");
+
+        /*
+         * Extract dominant colours
+         */
+        extractPalette();
+
+        /*
+         * Pick the first palette colour
+         * as the initial colour.
+         */
+        if (currentPalette.length > 0) {
+
+            const first = hexToRgb(currentPalette[0]);
+
+            updateColor(
+                first.r,
+                first.g,
+                first.b
+            );
+        }
+
+        /*
+         * Scroll to editor
+         */
+        setTimeout(() => {
+
+            editor.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+
+        }, 100);
+
+        URL.revokeObjectURL(image.src);
     };
 
     image.src = URL.createObjectURL(file);
 }
 
 
-/* --------------------------------
-   Click Image
--------------------------------- */
+/* =================================
+   CLICK IMAGE
+================================= */
 
 canvas.addEventListener("click", function (event) {
 
     const rect = canvas.getBoundingClientRect();
-
-    /*
-        The canvas might be displayed at a different
-        size than its actual resolution.
-
-        Therefore we calculate the scale.
-    */
 
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -81,8 +176,6 @@ canvas.addEventListener("click", function (event) {
         (event.clientY - rect.top) * scaleY
     );
 
-
-    /* Get the exact pixel */
 
     const pixel = ctx.getImageData(
         x,
@@ -99,25 +192,43 @@ canvas.addEventListener("click", function (event) {
 
     updateColor(r, g, b);
 
+    /*
+     * Move picker indicator
+     */
+
+    pickerIndicator.style.left =
+        `${event.clientX - rect.left}px`;
+
+    pickerIndicator.style.top =
+        `${event.clientY - rect.top}px`;
+
+    pickerRgb.textContent =
+        `${r}, ${g}, ${b}`;
+
+    pickerIndicator.classList.remove("hidden");
+
 });
 
 
-/* --------------------------------
-   Update Colour
--------------------------------- */
+/* =================================
+   UPDATE COLOUR
+================================= */
 
 function updateColor(r, g, b) {
 
     const hex = rgbToHex(r, g, b);
-    document.body.style.setProperty(
-        "--selected-color",
-        hex
-    );
+
+    /*
+     * Update page gradient.
+     * Your existing gradient remains unchanged.
+     */
 
     document.body.style.setProperty(
         "--selected-rgb",
         `${r}, ${g}, ${b}`
     );
+
+
     const hsl = rgbToHsl(r, g, b);
     const cmyk = rgbToCmyk(r, g, b);
 
@@ -136,31 +247,51 @@ function updateColor(r, g, b) {
         `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`;
 
 
-    recipeText.textContent =
-        generateRecipe(r, g, b);
+    /*
+     * Update colour recipe
+     */
+
+    generateRecipe(r, g, b);
 }
 
 
-/* --------------------------------
+/* =================================
    RGB → HEX
--------------------------------- */
+================================= */
 
 function rgbToHex(r, g, b) {
 
     return "#" +
         [r, g, b]
-        .map(value =>
-            value.toString(16).padStart(2, "0")
-        )
-        .join("")
-        .toUpperCase();
+            .map(value =>
+                value.toString(16).padStart(2, "0")
+            )
+            .join("")
+            .toUpperCase();
 
 }
 
 
-/* --------------------------------
+/* =================================
+   HEX → RGB
+================================= */
+
+function hexToRgb(hex) {
+
+    const value = hex.replace("#", "");
+
+    return {
+        r: parseInt(value.substring(0, 2), 16),
+        g: parseInt(value.substring(2, 4), 16),
+        b: parseInt(value.substring(4, 6), 16)
+    };
+
+}
+
+
+/* =================================
    RGB → HSL
--------------------------------- */
+================================= */
 
 function rgbToHsl(r, g, b) {
 
@@ -203,7 +334,6 @@ function rgbToHsl(r, g, b) {
             case b:
                 h = (r - g) / d + 4;
                 break;
-
         }
 
         h /= 6;
@@ -217,9 +347,9 @@ function rgbToHsl(r, g, b) {
 }
 
 
-/* --------------------------------
+/* =================================
    RGB → CMYK
--------------------------------- */
+================================= */
 
 function rgbToCmyk(r, g, b) {
 
@@ -253,65 +383,449 @@ function rgbToCmyk(r, g, b) {
 }
 
 
-/* --------------------------------
-   Colour Recipe
--------------------------------- */
+/* =================================
+   COLOUR RECIPE
+================================= */
 
 function generateRecipe(r, g, b) {
 
-    const total = r + g + b;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
 
-    if (total === 0) {
-        return "This colour is pure black.";
+    /*
+     * Calculate approximate pigment proportions.
+     */
+
+    let red = 0;
+    let yellow = 0;
+    let blue = 0;
+    let white = 0;
+    let black = 0;
+
+
+    /*
+     * Black / white component
+     */
+
+    if (max < 128) {
+
+        black = Math.round(
+            ((255 - max) / 255) * 100
+        );
+
     }
 
-    if (r > 240 && g > 240 && b > 240) {
-        return "This colour is approximately pure white.";
+    if (min > 180) {
+
+        white = Math.round(
+            (min / 255) * 100
+        );
+
     }
 
-    if (Math.abs(r - g) < 10 &&
-        Math.abs(g - b) < 10) {
 
-        if (r > 128) {
+    /*
+     * Primary colour proportions
+     */
 
-            const black = Math.round(
-                (255 - r) / 255 * 100
-            );
+    const adjustedR = Math.max(0, r - min);
+    const adjustedG = Math.max(0, g - min);
+    const adjustedB = Math.max(0, b - min);
 
-            return `Approximately ${100 - black}% white + ${black}% black.`;
+    const primaryTotal =
+        adjustedR +
+        adjustedG +
+        adjustedB;
+
+
+    if (primaryTotal > 0) {
+
+        red = Math.round(
+            (adjustedR / primaryTotal) * 100
+        );
+
+        yellow = Math.round(
+            (adjustedG / primaryTotal) * 100
+        );
+
+        blue = Math.round(
+            (adjustedB / primaryTotal) * 100
+        );
+    }
+
+
+    /*
+     * Make the percentages visually useful.
+     */
+
+    if (max > 200) {
+        white = Math.max(
+            white,
+            Math.round((max - 180) / 75 * 100)
+        );
+    }
+
+    if (max < 80) {
+        black = Math.max(
+            black,
+            Math.round((80 - max) / 80 * 100)
+        );
+    }
+
+
+    document.getElementById("red-percent").textContent =
+        `${Math.min(red, 100)}%`;
+
+    document.getElementById("yellow-percent").textContent =
+        `${Math.min(yellow, 100)}%`;
+
+    document.getElementById("blue-percent").textContent =
+        `${Math.min(blue, 100)}%`;
+
+    document.getElementById("white-percent").textContent =
+        `${Math.min(white, 100)}%`;
+
+    document.getElementById("black-percent").textContent =
+        `${Math.min(black, 100)}%`;
+
+
+    /*
+     * Human-readable explanation
+     */
+
+    let description = "";
+
+    if (r > g * 1.25 && r > b * 1.25) {
+
+        description =
+            "Start with a strong red base. Add a small amount of yellow to warm the colour, then adjust with white to create a lighter shade or black for a deeper tone.";
+
+    } else if (r > b && g > b) {
+
+        description =
+            "Start with red and yellow to create a warm orange base. Increase red for a richer tone, or add white to make the colour softer and lighter.";
+
+    } else if (g > r && g > b) {
+
+        description =
+            "Start with yellow and blue to create the green base. Add more yellow for a warmer green or blue for a deeper, cooler shade.";
+
+    } else if (b > r && b > g) {
+
+        description =
+            "Start with blue as the dominant colour. Add red to move toward violet, or add white to create a softer and lighter blue.";
+
+    } else if (
+        Math.abs(r - g) < 15 &&
+        Math.abs(g - b) < 15
+    ) {
+
+        if (max > 180) {
+
+            description =
+                "This is a light neutral shade. Start with white and add a very small amount of black to reduce its brightness.";
 
         } else {
 
-            const white = Math.round(
-                r / 255 * 100
+            description =
+                "This is a neutral darker shade. Start with black and gradually introduce white until you reach the desired brightness.";
+
+        }
+
+    } else {
+
+        description =
+            "This colour is a balanced mixture of primary tones. Adjust the dominant colour first, then use white to lighten or black to deepen the final shade.";
+    }
+
+
+    recipeText.textContent = description;
+}
+
+
+/* =================================
+   DOMINANT COLOUR EXTRACTION
+================================= */
+
+function extractPalette() {
+
+    /*
+     * Scale the image down before processing.
+     * This makes palette extraction much faster.
+     */
+
+    const maxSize = 120;
+
+    const scale =
+        Math.min(
+            1,
+            maxSize / Math.max(
+                canvas.width,
+                canvas.height
+            )
+        );
+
+    const width =
+        Math.max(1, Math.floor(canvas.width * scale));
+
+    const height =
+        Math.max(1, Math.floor(canvas.height * scale));
+
+
+    const tempCanvas =
+        document.createElement("canvas");
+
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+
+    const tempCtx =
+        tempCanvas.getContext("2d", {
+            willReadFrequently: true
+        });
+
+
+    tempCtx.drawImage(
+        canvas,
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    const pixels =
+        tempCtx.getImageData(
+            0,
+            0,
+            width,
+            height
+        ).data;
+
+
+    const colourCounts = new Map();
+
+
+    /*
+     * Quantize colours.
+     *
+     * Instead of treating every pixel as unique,
+     * nearby colours are grouped together.
+     */
+
+    for (let i = 0; i < pixels.length; i += 16) {
+
+        const r = Math.round(pixels[i] / 32) * 32;
+        const g = Math.round(pixels[i + 1] / 32) * 32;
+        const b = Math.round(pixels[i + 2] / 32) * 32;
+
+
+        /*
+         * Ignore almost transparent pixels.
+         */
+
+        if (pixels[i + 3] < 180) {
+            continue;
+        }
+
+
+        const key = `${r},${g},${b}`;
+
+        colourCounts.set(
+            key,
+            (colourCounts.get(key) || 0) + 1
+        );
+    }
+
+
+    /*
+     * Sort colours by frequency.
+     */
+
+    const sorted =
+        [...colourCounts.entries()]
+            .sort((a, b) => b[1] - a[1]);
+
+
+    const selected = [];
+
+
+    /*
+     * Pick visually different colours.
+     */
+
+    for (const [key] of sorted) {
+
+        const [r, g, b] =
+            key.split(",").map(Number);
+
+
+        let tooSimilar = false;
+
+
+        for (const existing of selected) {
+
+            const er = existing.r;
+            const eg = existing.g;
+            const eb = existing.b;
+
+
+            const distance =
+                Math.sqrt(
+                    Math.pow(r - er, 2) +
+                    Math.pow(g - eg, 2) +
+                    Math.pow(b - eb, 2)
+                );
+
+
+            if (distance < 45) {
+
+                tooSimilar = true;
+                break;
+
+            }
+        }
+
+
+        if (!tooSimilar) {
+
+            selected.push({
+                r,
+                g,
+                b
+            });
+
+        }
+
+
+        if (selected.length === 6) {
+            break;
+        }
+    }
+
+
+    currentPalette =
+        selected.map(
+            colour =>
+                rgbToHex(
+                    colour.r,
+                    colour.g,
+                    colour.b
+                )
+        );
+
+
+    renderPalette();
+}
+
+
+/* =================================
+   RENDER PALETTE
+================================= */
+
+function renderPalette() {
+
+    palette.innerHTML = "";
+
+
+    currentPalette.forEach(hex => {
+
+        const item =
+            document.createElement("div");
+
+        item.className =
+            "palette-item";
+
+
+        item.innerHTML = `
+            <div
+                class="palette-color"
+                style="background-color: ${hex}"
+            ></div>
+
+            <div class="palette-hex">
+                ${hex}
+            </div>
+        `;
+
+
+        /*
+         * Clicking a palette colour
+         * selects it as the current colour.
+         */
+
+        item.addEventListener("click", function () {
+
+            const rgb = hexToRgb(hex);
+
+            updateColor(
+                rgb.r,
+                rgb.g,
+                rgb.b
             );
 
-            return `Approximately ${white}% white + ${100 - white}% black.`;
-        }
-    }
+            pickerIndicator.classList.add("hidden");
+
+        });
 
 
-    if (r > g && r > b) {
+        palette.appendChild(item);
 
-        if (g > b) {
-            return "A warm mixture dominated by red, with yellow added to shift it toward orange.";
-        }
+    });
 
-        return "A red-dominant mixture with blue added to create a deeper violet tone.";
-    }
-
-
-    if (g > r && g > b) {
-
-        return "A green-dominant mixture, approximately combining yellow and blue pigments.";
-    }
-
-
-    if (b > r && b > g) {
-
-        return "A blue-dominant mixture, with red or white added depending on the desired shade.";
-    }
-
-
-    return "A balanced mixture of the primary colours with white or black used to adjust the shade.";
 }
+
+
+/* =================================
+   COPY BUTTONS
+================================= */
+
+document.querySelectorAll(
+    ".copy-button"
+).forEach(button => {
+
+    button.addEventListener(
+        "click",
+        function () {
+
+            const target =
+                document.getElementById(
+                    this.dataset.copyTarget
+                );
+
+            navigator.clipboard.writeText(
+                target.textContent
+            );
+
+        }
+    );
+
+});
+
+
+/* =================================
+   COPY PALETTE
+================================= */
+
+copyPaletteButton.addEventListener(
+    "click",
+    function () {
+
+        navigator.clipboard.writeText(
+            currentPalette.join("\n")
+        );
+
+        const original =
+            this.innerHTML;
+
+        this.textContent =
+            "✓ Copied";
+
+        setTimeout(() => {
+
+            this.innerHTML =
+                original;
+
+        }, 1200);
+
+    }
+);
