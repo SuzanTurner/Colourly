@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Colourly — Pick Any Colour</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">Colourly</div>
+
+        <p>Find the exact colour hiding anywhere in your image.</p>
+    </header>
+
+
+    <main>
+
+        <!-- Upload section -->
+        <section class="upload-section">
+
+            <div id="drop-zone" class="drop-zone">
+
+                <div class="upload-icon">＋</div>
+
+                <h2>Drop an image here</h2>
+
+                <p>or</p>
+
+                <label for="image-input" class="upload-button">
+                    Choose Image
+                </label>
+
+                <input
+                    type="file"
+                    id="image-input"
+                    accept="image/*"
+                    hidden
+                >
+
+                <small>PNG, JPG, JPEG, WEBP</small>
+
+            </div>
+
+        </section>
+
+
+        <!-- Image section -->
+        <section id="editor" class="editor hidden">
+
+            <div class="canvas-container">
+                <canvas id="image-canvas"></canvas>
+            </div>
+
+
+            <!-- Colour information -->
+            <div class="color-panel">
+
+                <div
+                    id="color-preview"
+                    class="color-preview"
+                ></div>
+
+                <h2 id="hex-value">#FFFFFF</h2>
+
+
+                <div class="color-values">
+
+                    <div class="color-value">
+                        <span>RGB</span>
+                        <strong id="rgb-value">255, 255, 255</strong>
+                    </div>
+
+                    <div class="color-value">
+                        <span>HSL</span>
+                        <strong id="hsl-value">0°, 0%, 100%</strong>
+                    </div>
+
+                    <div class="color-value">
+                        <span>CMYK</span>
+                        <strong id="cmyk-value">0%, 0%, 0%, 0%</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="recipe">
+
+                    <h3>How to make this colour</h3>
+
+                    <p id="recipe-text">
+                        Click anywhere on the image to discover a colour.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
