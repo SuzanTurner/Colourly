@@ -976,70 +976,48 @@ function generateRecipe(r, g, b) {
 
 }
 
-
 /* =================================
-   DOMINANT COLOUR EXTRACTION
+   RECONSTRUCTION PALETTE
 ================================= */
 
 function extractPalette() {
 
+    const maxSize = 160;
+
     /*
-     * Scale image down before processing.
-     * This keeps palette extraction fast.
+     * Resize image for processing.
      */
 
-    const maxSize = 120;
+    const scale = Math.min(
+        1,
+        maxSize / Math.max(
+            canvas.width,
+            canvas.height
+        )
+    );
 
+    const width = Math.max(
+        1,
+        Math.floor(canvas.width * scale)
+    );
 
-    const scale =
-        Math.min(
-            1,
-            maxSize /
-            Math.max(
-                canvas.width,
-                canvas.height
-            )
-        );
-
-
-    const width =
-        Math.max(
-            1,
-            Math.floor(
-                canvas.width * scale
-            )
-        );
-
-
-    const height =
-        Math.max(
-            1,
-            Math.floor(
-                canvas.height * scale
-            )
-        );
+    const height = Math.max(
+        1,
+        Math.floor(canvas.height * scale)
+    );
 
 
     const tempCanvas =
-        document.createElement(
-            "canvas"
-        );
+        document.createElement("canvas");
 
-
-    tempCanvas.width =
-        width;
-
-    tempCanvas.height =
-        height;
+    tempCanvas.width = width;
+    tempCanvas.height = height;
 
 
     const tempCtx =
-        tempCanvas.getContext(
-            "2d",
-            {
-                willReadFrequently: true
-            }
-        );
+        tempCanvas.getContext("2d", {
+            willReadFrequently: true
+        });
 
 
     tempCtx.drawImage(
@@ -1051,26 +1029,25 @@ function extractPalette() {
     );
 
 
-    const pixels =
+    const imageData =
         tempCtx.getImageData(
             0,
             0,
             width,
             height
-        ).data;
+        );
 
 
-    const colourCounts =
-        new Map();
+    const pixels = imageData.data;
+
+    const points = [];
 
 
     /*
-     * Quantize colours.
+     * Sample pixels.
      *
-     * Nearby colours are grouped
-     * together so that thousands of
-     * slightly different pixels don't
-     * become separate palette entries.
+     * Every 4th pixel is enough for
+     * a good reconstruction palette.
      */
 
     for (
@@ -1079,133 +1056,330 @@ function extractPalette() {
         i += 16
     ) {
 
-        const r =
-            Math.round(
-                pixels[i] / 32
-            ) * 32;
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const a = pixels[i + 3];
 
 
-        const g =
-            Math.round(
-                pixels[i + 1] / 32
-            ) * 32;
-
-
-        const b =
-            Math.round(
-                pixels[i + 2] / 32
-            ) * 32;
-
-
-        /*
-         * Ignore transparent pixels.
-         */
-
-        if (
-            pixels[i + 3] < 180
-        ) {
+        if (a < 180) {
             continue;
         }
 
 
-        const key =
-            `${r},${g},${b}`;
+        points.push({
+            r,
+            g,
+            b,
+
+            /*
+             * Keep approximate location.
+             * This helps preserve colours that
+             * appear in different regions.
+             */
+
+            x:
+                (i / 4 % width) / width,
+
+            y:
+                Math.floor(i / 4 / width) / height
+        });
+
+    }
 
 
-        colourCounts.set(
-            key,
-            (
-                colourCounts.get(key) ||
-                0
-            ) + 1
+    if (points.length === 0) {
+        return;
+    }
+
+
+    /*
+     * We generate more clusters than
+     * the final palette requires.
+     *
+     * This gives us candidates such as:
+     *
+     * black
+     * dark blue
+     * blue
+     * white
+     * yellow
+     * green
+     *
+     * and then we intelligently select
+     * the best ones.
+     */
+
+    const clusterCount =
+        Math.min(
+            Math.max(
+                paletteColourCount * 3,
+                12
+            ),
+            30
         );
+
+
+    let centroids =
+        initializeReconstructionCentroids(
+            points,
+            clusterCount
+        );
+
+
+    /*
+     * Run clustering.
+     */
+
+    const maxIterations = 12;
+
+
+    for (
+        let iteration = 0;
+        iteration < maxIterations;
+        iteration++
+    ) {
+
+        const clusters =
+            Array.from(
+                {
+                    length: clusterCount
+                },
+                () => []
+            );
+
+
+        /*
+         * Assign each pixel to its
+         * closest colour cluster.
+         */
+
+        for (
+            const point of points
+        ) {
+
+            let closest = 0;
+
+            let smallestDistance =
+                Infinity;
+
+
+            for (
+                let i = 0;
+                i < centroids.length;
+                i++
+            ) {
+
+                const distance =
+                    reconstructionColorDistance(
+                        point,
+                        centroids[i]
+                    );
+
+
+                if (
+                    distance <
+                    smallestDistance
+                ) {
+
+                    smallestDistance =
+                        distance;
+
+                    closest = i;
+                }
+
+            }
+
+
+            clusters[closest].push(
+                point
+            );
+
+        }
+
+
+        /*
+         * Calculate new cluster centres.
+         */
+
+        const newCentroids = [];
+
+
+        for (
+            let i = 0;
+            i < clusterCount;
+            i++
+        ) {
+
+            const cluster =
+                clusters[i];
+
+
+            if (
+                cluster.length === 0
+            ) {
+
+                newCentroids.push(
+                    points[
+                        Math.floor(
+                            Math.random() *
+                            points.length
+                        )
+                    ]
+                );
+
+                continue;
+            }
+
+
+            let r = 0;
+            let g = 0;
+            let b = 0;
+
+
+            for (
+                const point of cluster
+            ) {
+
+                r += point.r;
+                g += point.g;
+                b += point.b;
+
+            }
+
+
+            newCentroids.push({
+
+                r:
+                    Math.round(
+                        r / cluster.length
+                    ),
+
+                g:
+                    Math.round(
+                        g / cluster.length
+                    ),
+
+                b:
+                    Math.round(
+                        b / cluster.length
+                    )
+
+            });
+
+        }
+
+
+        /*
+         * Check convergence.
+         */
+
+        let movement = 0;
+
+
+        for (
+            let i = 0;
+            i < clusterCount;
+            i++
+        ) {
+
+            movement +=
+                reconstructionColorDistance(
+                    centroids[i],
+                    newCentroids[i]
+                );
+
+        }
+
+
+        centroids =
+            newCentroids;
+
+
+        if (
+            movement < 5
+        ) {
+
+            break;
+
+        }
 
     }
 
 
     /*
-     * Sort colours by frequency.
+     * Analyse the final clusters.
      */
 
-    const sorted =
-        [
-            ...colourCounts.entries()
-        ]
-        .sort(
-            (a, b) =>
-                b[1] - a[1]
+    const clusters =
+        analyseReconstructionClusters(
+            points,
+            centroids
         );
 
+
+    /*
+     * Score each cluster.
+     */
+
+    clusters.forEach(
+        cluster => {
+
+            cluster.score =
+                reconstructionScore(
+                    cluster,
+                    clusters
+                );
+
+        }
+    );
+
+
+    /*
+     * Sort by reconstruction usefulness.
+     */
+
+    clusters.sort(
+        (a, b) =>
+            b.score - a.score
+    );
+
+
+    /*
+     * Select the final palette.
+     */
 
     const selected = [];
 
 
-    /*
-     * Pick visually different colours.
-     */
-
     for (
-        const [key] of sorted
+        const cluster of clusters
     ) {
 
-        const [r, g, b] =
-            key
-                .split(",")
-                .map(Number);
-
+        /*
+         * Don't allow several nearly
+         * identical colours.
+         */
 
         let tooSimilar = false;
 
-
-        /*
-         * Compare with colours
-         * already selected.
-         */
 
         for (
             const existing of selected
         ) {
 
-            const er =
-                existing.r;
-
-            const eg =
-                existing.g;
-
-            const eb =
-                existing.b;
-
-
             const distance =
-                Math.sqrt(
-                    Math.pow(
-                        r - er,
-                        2
-                    ) +
-
-                    Math.pow(
-                        g - eg,
-                        2
-                    ) +
-
-                    Math.pow(
-                        b - eb,
-                        2
-                    )
+                reconstructionColorDistance(
+                    cluster,
+                    existing
                 );
 
 
-            /*
-             * If the colours are too
-             * similar, don't add it.
-             */
-
             if (
-                distance < 45
+                distance < 38
             ) {
 
                 tooSimilar = true;
-
                 break;
 
             }
@@ -1213,30 +1387,16 @@ function extractPalette() {
         }
 
 
-        /*
-         * Add visually different colour.
-         */
+        if (
+            !tooSimilar
+        ) {
 
-        if (!tooSimilar) {
-
-            selected.push({
-                r,
-                g,
-                b
-            });
+            selected.push(
+                cluster
+            );
 
         }
 
-
-        /*
-         * IMPORTANT:
-         *
-         * This now uses the selected
-         * paletteColourCount instead
-         * of always stopping at 6.
-         *
-         * Therefore + and - work.
-         */
 
         if (
             selected.length >=
@@ -1251,8 +1411,53 @@ function extractPalette() {
 
 
     /*
-     * Convert selected colours
-     * to HEX values.
+     * Safety fallback.
+     *
+     * Make sure we always have the
+     * requested number where possible.
+     */
+
+    if (
+        selected.length <
+        paletteColourCount
+    ) {
+
+        for (
+            const cluster of clusters
+        ) {
+
+            if (
+                selected.includes(
+                    cluster
+                )
+            ) {
+
+                continue;
+
+            }
+
+
+            selected.push(
+                cluster
+            );
+
+
+            if (
+                selected.length >=
+                paletteColourCount
+            ) {
+
+                break;
+
+            }
+
+        }
+
+    }
+
+
+    /*
+     * Convert colours to HEX.
      */
 
     currentPalette =
@@ -1273,6 +1478,573 @@ function extractPalette() {
     renderPalette();
 
 }
+
+
+/* =================================
+   RECONSTRUCTION CLUSTER ANALYSIS
+================================= */
+
+function analyseReconstructionClusters(
+    points,
+    centroids
+) {
+
+    const clusters =
+        centroids.map(
+            centroid => ({
+
+                r: centroid.r,
+                g: centroid.g,
+                b: centroid.b,
+
+                size: 0,
+
+                /*
+                 * Used to calculate
+                 * spatial distribution.
+                 */
+
+                minX: 1,
+                maxX: 0,
+                minY: 1,
+                maxY: 0,
+
+                totalX: 0,
+                totalY: 0
+
+            })
+        );
+
+
+    /*
+     * Assign points to clusters again.
+     */
+
+    for (
+        const point of points
+    ) {
+
+        let closest = 0;
+
+        let smallestDistance =
+            Infinity;
+
+
+        for (
+            let i = 0;
+            i < centroids.length;
+            i++
+        ) {
+
+            const distance =
+                reconstructionColorDistance(
+                    point,
+                    centroids[i]
+                );
+
+
+            if (
+                distance <
+                smallestDistance
+            ) {
+
+                smallestDistance =
+                    distance;
+
+                closest = i;
+            }
+
+        }
+
+
+        const cluster =
+            clusters[closest];
+
+
+        cluster.size++;
+
+
+        cluster.minX =
+            Math.min(
+                cluster.minX,
+                point.x
+            );
+
+        cluster.maxX =
+            Math.max(
+                cluster.maxX,
+                point.x
+            );
+
+        cluster.minY =
+            Math.min(
+                cluster.minY,
+                point.y
+            );
+
+        cluster.maxY =
+            Math.max(
+                cluster.maxY,
+                point.y
+            );
+
+
+        cluster.totalX +=
+            point.x;
+
+        cluster.totalY +=
+            point.y;
+
+    }
+
+
+    const totalPoints =
+        points.length;
+
+
+    /*
+     * Add useful measurements.
+     */
+
+    clusters.forEach(
+        cluster => {
+
+            cluster.area =
+                cluster.size /
+                totalPoints;
+
+
+            cluster.saturation =
+                colourSaturation(
+                    cluster.r,
+                    cluster.g,
+                    cluster.b
+                );
+
+
+            cluster.brightness =
+                (
+                    cluster.r +
+                    cluster.g +
+                    cluster.b
+                ) / 3;
+
+
+            cluster.contrast =
+                calculateContrast(
+                    cluster,
+                    centroids
+                );
+
+
+            /*
+             * Spatial spread.
+             *
+             * A colour appearing across
+             * different areas of the image
+             * gets more importance.
+             */
+
+            const spreadX =
+                cluster.maxX -
+                cluster.minX;
+
+
+            const spreadY =
+                cluster.maxY -
+                cluster.minY;
+
+
+            cluster.spatialSpread =
+                Math.min(
+                    1,
+                    (
+                        spreadX +
+                        spreadY
+                    ) / 2
+                );
+
+        }
+    );
+
+
+    return clusters.filter(
+        cluster =>
+            cluster.size > 0
+    );
+
+}
+
+
+/* =================================
+   RECONSTRUCTION SCORE
+================================= */
+
+function reconstructionScore(
+    cluster,
+    allClusters
+) {
+
+    /*
+     * AREA
+     *
+     * Large regions matter, but they
+     * should NOT dominate everything.
+     */
+
+    const areaScore =
+        Math.sqrt(
+            cluster.area
+        );
+
+
+    /*
+     * CONTRAST
+     *
+     * Important for things like:
+     *
+     * white moon
+     * yellow lights
+     * bright stars
+     * dark silhouettes
+     */
+
+    const contrastScore =
+        cluster.contrast;
+
+
+    /*
+     * SATURATION
+     *
+     * Helps preserve meaningful
+     * greens, yellows, reds, etc.
+     */
+
+    const saturationScore =
+        cluster.saturation;
+
+
+    /*
+     * SPATIAL PRESENCE
+     */
+
+    const spatialScore =
+        cluster.spatialSpread;
+
+
+    /*
+     * BRIGHTNESS EXTREMES
+     *
+     * Very bright and very dark colours
+     * are often visually important.
+     */
+
+    let brightnessScore = 0;
+
+
+    if (
+        cluster.brightness < 45 ||
+        cluster.brightness > 210
+    ) {
+
+        brightnessScore = 1;
+
+    }
+
+    else {
+
+        brightnessScore =
+            Math.abs(
+                cluster.brightness -
+                128
+            ) / 128;
+
+    }
+
+
+    /*
+     * FINAL WEIGHT
+     *
+     * Area:          35%
+     * Contrast:      30%
+     * Saturation:    15%
+     * Spatial:       10%
+     * Extremes:      10%
+     */
+
+    return (
+
+        areaScore * 0.35 +
+
+        contrastScore * 0.30 +
+
+        saturationScore * 0.15 +
+
+        spatialScore * 0.10 +
+
+        brightnessScore * 0.10
+
+    );
+
+}
+
+
+/* =================================
+   CONTRAST CALCULATION
+================================= */
+
+function calculateContrast(
+    cluster,
+    centroids
+) {
+
+    let maximumContrast = 0;
+
+
+    for (
+        const other of centroids
+    ) {
+
+        const distance =
+            reconstructionColorDistance(
+                cluster,
+                other
+            );
+
+
+        maximumContrast =
+            Math.max(
+                maximumContrast,
+                distance
+            );
+
+    }
+
+
+    /*
+     * Normalize RGB distance.
+     *
+     * Maximum possible RGB distance
+     * is approximately 441.
+     */
+
+    return Math.min(
+        1,
+        maximumContrast / 220
+    );
+
+}
+
+
+/* =================================
+   COLOUR SATURATION
+================================= */
+
+function colourSaturation(
+    r,
+    g,
+    b
+) {
+
+    const max =
+        Math.max(
+            r,
+            g,
+            b
+        );
+
+
+    const min =
+        Math.min(
+            r,
+            g,
+            b
+        );
+
+
+    if (
+        max === 0
+    ) {
+
+        return 0;
+
+    }
+
+
+    return (
+        max - min
+    ) / max;
+
+}
+
+
+/* =================================
+   RGB COLOUR DISTANCE
+================================= */
+
+function reconstructionColorDistance(
+    a,
+    b
+) {
+
+    return Math.sqrt(
+
+        Math.pow(
+            a.r - b.r,
+            2
+        ) +
+
+        Math.pow(
+            a.g - b.g,
+            2
+        ) +
+
+        Math.pow(
+            a.b - b.b,
+            2
+        )
+
+    );
+
+}
+
+
+/* =================================
+   K-MEANS++ INITIALIZATION
+================================= */
+
+function initializeReconstructionCentroids(
+    points,
+    k
+) {
+
+    const centroids = [];
+
+
+    /*
+     * First centroid.
+     */
+
+    centroids.push(
+        points[
+            Math.floor(
+                Math.random() *
+                points.length
+            )
+        ]
+    );
+
+
+    /*
+     * Choose additional centres
+     * that are far away from existing
+     * colours.
+     */
+
+    while (
+        centroids.length < k
+    ) {
+
+        const distances = [];
+
+        let totalDistance = 0;
+
+
+        for (
+            const point of points
+        ) {
+
+            let smallest =
+                Infinity;
+
+
+            for (
+                const centroid
+                of centroids
+            ) {
+
+                const distance =
+                    reconstructionColorDistance(
+                        point,
+                        centroid
+                    );
+
+
+                if (
+                    distance <
+                    smallest
+                ) {
+
+                    smallest =
+                        distance;
+
+                }
+
+            }
+
+
+            const squared =
+                smallest * smallest;
+
+
+            distances.push(
+                squared
+            );
+
+
+            totalDistance +=
+                squared;
+
+        }
+
+
+        let random =
+            Math.random() *
+            totalDistance;
+
+
+        let selectedIndex = 0;
+
+
+        for (
+            let i = 0;
+            i < distances.length;
+            i++
+        ) {
+
+            random -=
+                distances[i];
+
+
+            if (
+                random <= 0
+            ) {
+
+                selectedIndex = i;
+
+                break;
+
+            }
+
+        }
+
+
+        centroids.push(
+            points[selectedIndex]
+        );
+
+    }
+
+
+    return centroids;
+
+}
+
+
+               
+
+
+                
 
 
 /* =================================
