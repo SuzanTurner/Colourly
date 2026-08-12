@@ -1214,22 +1214,23 @@ function extractPalette() {
             const cluster =
                 clusters[i];
 
+            if (cluster.length === 0) {
 
-            if (
-                cluster.length === 0
-            ) {
+    /*
+     * Deterministic fallback.
+     *
+     * Use a predictable point instead
+     * of Math.random().
+     */
 
-                newCentroids.push(
-                    points[
-                        Math.floor(
-                            Math.random() *
-                            points.length
-                        )
-                    ]
-                );
+    newCentroids.push(
+        points[
+            i % points.length
+        ]
+    );
 
-                continue;
-            }
+    continue;
+}
 
 
             let r = 0;
@@ -1912,7 +1913,6 @@ function reconstructionColorDistance(
 /* =================================
    K-MEANS++ INITIALIZATION
 ================================= */
-
 function initializeReconstructionCentroids(
     points,
     k
@@ -1920,47 +1920,42 @@ function initializeReconstructionCentroids(
 
     const centroids = [];
 
-
     /*
-     * First centroid.
+     * Always choose the first centroid
+     * from the same location.
      */
 
     centroids.push(
-        points[
-            Math.floor(
-                Math.random() *
-                points.length
-            )
-        ]
+        points[0]
     );
 
 
     /*
-     * Choose additional centres
-     * that are far away from existing
-     * colours.
+     * Instead of Math.random(),
+     * choose the point that is farthest
+     * from the colours already selected.
+     *
+     * This makes K-means++ deterministic.
      */
 
     while (
         centroids.length < k
     ) {
 
-        const distances = [];
-
-        let totalDistance = 0;
+        let bestPoint = null;
+        let bestDistance = -1;
 
 
         for (
             const point of points
         ) {
 
-            let smallest =
+            let smallestDistance =
                 Infinity;
 
 
             for (
-                const centroid
-                of centroids
+                const centroid of centroids
             ) {
 
                 const distance =
@@ -1972,10 +1967,10 @@ function initializeReconstructionCentroids(
 
                 if (
                     distance <
-                    smallest
+                    smallestDistance
                 ) {
 
-                    smallest =
+                    smallestDistance =
                         distance;
 
                 }
@@ -1983,61 +1978,45 @@ function initializeReconstructionCentroids(
             }
 
 
-            const squared =
-                smallest * smallest;
-
-
-            distances.push(
-                squared
-            );
-
-
-            totalDistance +=
-                squared;
-
-        }
-
-
-        let random =
-            Math.random() *
-            totalDistance;
-
-
-        let selectedIndex = 0;
-
-
-        for (
-            let i = 0;
-            i < distances.length;
-            i++
-        ) {
-
-            random -=
-                distances[i];
-
+            /*
+             * Pick the point that is
+             * most different from the
+             * existing centroids.
+             */
 
             if (
-                random <= 0
+                smallestDistance >
+                bestDistance
             ) {
 
-                selectedIndex = i;
+                bestDistance =
+                    smallestDistance;
 
-                break;
+                bestPoint =
+                    point;
 
             }
 
         }
 
 
+        /*
+         * Safety check.
+         */
+
+        if (!bestPoint) {
+            break;
+        }
+
+
         centroids.push(
-            points[selectedIndex]
+            bestPoint
         );
 
     }
 
 
     return centroids;
-
 }
 
 
