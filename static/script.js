@@ -722,6 +722,62 @@ function generateRecipe(r, g, b) {
     const s = hsv.s;
     const v = hsv.v;
 
+    /* =================================
+   GRAYSCALE COLOURS
+================================= */
+
+if (s <= 0.01) {
+
+    /*
+     * A grayscale colour has no hue.
+     *
+     * Therefore it must NEVER contain
+     * red, yellow, or blue.
+     *
+     * Only white + black are relevant.
+     */
+
+    const blackPercent =
+        Math.round((1 - v) * 100);
+
+    const whitePercent =
+        100 - blackPercent;
+
+
+    setRecipeValues(
+        0,
+        0,
+        0,
+        whitePercent,
+        blackPercent
+    );
+
+
+    if (blackPercent >= 95) {
+
+        recipeText.textContent =
+            "This colour is nearly pure black. Use black pigment as the base and add a tiny amount of white only if needed.";
+
+    }
+
+    else if (whitePercent >= 95) {
+
+        recipeText.textContent =
+            "This colour is nearly pure white. Use white pigment as the base and add a tiny amount of black to lower the brightness.";
+
+    }
+
+    else {
+
+        recipeText.textContent =
+            `This is a neutral grey. Start with approximately ${blackPercent}% black and ${whitePercent}% white. Actual paint results will vary by pigment.`;
+
+    }
+
+
+    return;
+}
+
 
     /*
      * =================================
