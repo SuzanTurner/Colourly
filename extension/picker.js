@@ -244,7 +244,327 @@
             .addEventListener("click", pickColour);
 
     }
+function renderWidget(hex) {
 
+    let widget =
+        document.getElementById(WIDGET_ID);
+
+
+    if (!widget) {
+
+        widget =
+            document.createElement("div");
+
+        widget.id =
+            WIDGET_ID;
+
+        document.documentElement
+            .appendChild(widget);
+
+        makeDraggable(widget);
+
+    }
+
+
+    /* =================================
+       COLOUR VALUES
+    ================================= */
+
+    const rgb =
+        hexToRgb(hex);
+
+    const hsl =
+        rgbToHsl(
+            rgb.r,
+            rgb.g,
+            rgb.b
+        );
+
+    const cmyk =
+        rgbToCmyk(
+            rgb.r,
+            rgb.g,
+            rgb.b
+        );
+
+
+    const rgbText =
+        `${rgb.r}, ${rgb.g}, ${rgb.b}`;
+
+    const hslText =
+        `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
+
+    const cmykText =
+        `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`;
+
+
+    /* =================================
+       COLOURLY RADIAL GRADIENT
+    ================================= */
+
+    widget.style.background = `
+
+        radial-gradient(
+            circle at 0% 0%,
+
+            rgba(
+                ${rgb.r},
+                ${rgb.g},
+                ${rgb.b},
+                0.42
+            ),
+
+            rgba(
+                ${rgb.r},
+                ${rgb.g},
+                ${rgb.b},
+                0.18
+            ) 40%,
+
+            rgba(
+                255,
+                255,
+                255,
+                0
+            ) 70%
+        ),
+
+        radial-gradient(
+            circle at 100% 100%,
+
+            rgba(
+                ${rgb.r},
+                ${rgb.g},
+                ${rgb.b},
+                0.38
+            ),
+
+            rgba(
+                ${rgb.r},
+                ${rgb.g},
+                ${rgb.b},
+                0.15
+            ) 40%,
+
+            rgba(
+                255,
+                255,
+                255,
+                0
+            ) 70%
+        ),
+
+        #ffffff
+
+    `;
+
+
+    /* =================================
+       RENDER WIDGET
+    ================================= */
+
+    widget.innerHTML = `
+
+        <button
+            class="cw-close"
+            title="Close"
+        >
+            &times;
+        </button>
+
+
+        <div class="cw-top">
+
+            <div
+                class="cw-swatch"
+                style="background:${hex}"
+            ></div>
+
+
+            <div class="cw-hex">
+
+                <span class="cw-label">
+                    HEX
+                </span>
+
+
+                <div class="cw-hexrow">
+
+                    <strong>
+                        ${hex}
+                    </strong>
+
+
+                    <button
+                        class="cw-copy"
+                        data-value="${hex}"
+                    >
+                        &#10697;
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="cw-rows">
+
+            <div class="cw-row">
+
+                <span class="cw-label">
+                    RGB
+                </span>
+
+                <strong>
+                    ${rgbText}
+                </strong>
+
+                <button
+                    class="cw-copy"
+                    data-value="${rgbText}"
+                >
+                    &#10697;
+                </button>
+
+            </div>
+
+
+            <div class="cw-row">
+
+                <span class="cw-label">
+                    HSL
+                </span>
+
+                <strong>
+                    ${hslText}
+                </strong>
+
+                <button
+                    class="cw-copy"
+                    data-value="${hslText}"
+                >
+                    &#10697;
+                </button>
+
+            </div>
+
+
+            <div class="cw-row">
+
+                <span class="cw-label">
+                    CMYK
+                </span>
+
+                <strong>
+                    ${cmykText}
+                </strong>
+
+                <button
+                    class="cw-copy"
+                    data-value="${cmykText}"
+                >
+                    &#10697;
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <button
+            class="cw-pick-again"
+        >
+            Pick another colour
+        </button>
+
+    `;
+
+
+    /* =================================
+       CLOSE
+    ================================= */
+
+    widget
+        .querySelector(".cw-close")
+        .addEventListener(
+            "click",
+            () => {
+
+                widget.remove();
+
+            }
+        );
+
+
+    /* =================================
+       COPY
+    ================================= */
+
+    widget
+        .querySelectorAll(".cw-copy")
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                async () => {
+
+                    try {
+
+                        await navigator
+                            .clipboard
+                            .writeText(
+                                button.dataset.value
+                            );
+
+
+                        const original =
+                            button.innerHTML;
+
+
+                        button.textContent =
+                            "✓";
+
+
+                        setTimeout(() => {
+
+                            button.innerHTML =
+                                original;
+
+                        }, 800);
+
+                    }
+
+                    catch (error) {
+
+                        console.error(
+                            "Colourly: copy failed.",
+                            error
+                        );
+
+                    }
+
+                }
+            );
+
+        });
+
+
+    /* =================================
+       PICK AGAIN
+    ================================= */
+
+    widget
+        .querySelector(
+            ".cw-pick-again"
+        )
+        .addEventListener(
+            "click",
+            pickColour
+        );
+
+}
 
     /* =================================
        DRAG TO MOVE
