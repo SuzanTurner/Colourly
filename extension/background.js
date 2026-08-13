@@ -26,7 +26,8 @@ chrome.action.onClicked.addListener(async (tab) => {
 
             chrome.scripting.executeScript({
                 target: { tabId: tab.id },
-                files: ["picker.js"],
+                files: ["colour_names.js",
+                       "picker.js"],
                 injectImmediately: true
             })
 

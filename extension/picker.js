@@ -253,6 +253,10 @@
             const hex =
                 result.sRGBHex.toUpperCase();
 
+            renderWidget(hex);
+
+            addToHistory(hex);
+
 
             await addToHistory(hex);
 
@@ -449,6 +453,17 @@
     ================================= */
 
     async function renderWidget(hex) {
+
+        const colourResult =
+        await getColourName(hex);
+
+        const colourName =
+        colourResult.name;
+
+        const colourNameClass =
+    colourResult.exact
+        ? "cw-colour-name cw-exact"
+        : "cw-colour-name";
 
         let widget =
             document.getElementById(
@@ -655,6 +670,9 @@
                             </button>
 
                         </div>
+                           <span class="${colourNameClass}">
+                              ${colourName}
+                            </span>
 
                     </div>
 

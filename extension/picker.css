@@ -1873,3 +1873,19 @@
     color: #c58f00;
 
 }
+
+#colourly-widget .cw-colour-name {
+    display: block;
+    margin-top: 2px;
+
+    font-size: 14px;
+    line-height: 1.2;
+
+    color: #555;
+    font-weight: 400;
+}
+
+#colourly-widget .cw-colour-name.cw-exact {
+    font-weight: 700;
+    color: #111;
+}

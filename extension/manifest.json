@@ -26,5 +26,16 @@
 
     "icons": {
         "128": "logo.png"
+    },
+    
+    "web_accessible_resources": [
+    {
+        "resources": [
+            "colors.json"
+        ],
+        "matches": [
+            "<all_urls>"
+        ]
     }
+]
 }
