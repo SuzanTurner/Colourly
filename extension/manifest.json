@@ -5,11 +5,17 @@
 
     "version": "1.0.0",
 
-    "description": "Pick colours from any webpage and instantly get HEX, RGB, HSL and CMYK values.",
+    "description": "Pick any colour from a webpage and instantly get its HEX, RGB, HSL and CMYK values.",
 
     "permissions": [
+        "activeTab",
+        "scripting",
         "sidePanel"
     ],
+
+    "background": {
+        "service_worker": "background.js"
+    },
 
     "action": {
         "default_title": "Colourly",

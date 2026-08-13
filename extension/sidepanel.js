@@ -24,97 +24,27 @@ const cmykValue =
     );
 
 
-let picking = false;
-
-
 /* =================================
-   START EYE DROPPER
+   RECEIVE SELECTED COLOUR
 ================================= */
 
-async function startPicker() {
+chrome.runtime.onMessage.addListener(
+    (message) => {
 
-    if (!window.EyeDropper) {
+        if (
+            message.type !==
+            "COLOUR_SELECTED"
+        ) {
+            return;
+        }
 
-        console.error(
-            "EyeDropper API is not supported."
-        );
-
-        return;
-
-    }
-
-
-    if (picking) {
-        return;
-    }
-
-
-    picking = true;
-
-
-    try {
-
-        const eyeDropper =
-            new EyeDropper();
-
-
-        /*
-         * Wait for the user to click
-         * a colour on the screen.
-         */
-
-        const result =
-            await eyeDropper.open();
-
-
-        /*
-         * Example:
-         *
-         * #9A8F54
-         */
 
         updateColour(
-            result.sRGBHex
-        );
-
-
-    }
-
-    catch (error) {
-
-        /*
-         * Escape / cancellation.
-         */
-
-        console.log(
-            "Picker cancelled."
+            message.hex
         );
 
     }
-
-
-    picking = false;
-
-
-    /*
-     * Automatically reopen the
-     * picker after a selection.
-     *
-     * Small delay prevents the browser
-     * from treating this as the same
-     * interaction.
-     */
-
-    setTimeout(
-        () => {
-
-            startPicker();
-
-        },
-        100
-    );
-
-}
+);
 
 
 /* =================================
@@ -147,29 +77,37 @@ function updateColour(hex) {
         );
 
 
+    /* Preview */
+
     colourPreview.style.backgroundColor =
         hex;
 
+
+    /* HEX */
 
     hexValue.textContent =
         hex;
 
 
+    /* RGB */
+
     rgbValue.textContent =
         `${rgb.r}, ${rgb.g}, ${rgb.b}`;
 
+
+    /* HSL */
 
     hslValue.textContent =
         `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
 
 
+    /* CMYK */
+
     cmykValue.textContent =
         `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`;
 
 
-    /*
-     * Colourly gradient background.
-     */
+    /* Colourly gradient */
 
     document.body.style.setProperty(
 
@@ -234,7 +172,6 @@ function rgbToHsl(r, g, b) {
             g,
             b
         );
-
 
     const min =
         Math.min(
@@ -330,9 +267,14 @@ function rgbToHsl(r, g, b) {
 
 function rgbToCmyk(r, g, b) {
 
-    const R = r / 255;
-    const G = g / 255;
-    const B = b / 255;
+    const R =
+        r / 255;
+
+    const G =
+        g / 255;
+
+    const B =
+        b / 255;
 
 
     const k =
@@ -344,7 +286,9 @@ function rgbToCmyk(r, g, b) {
         );
 
 
-    if (k >= 0.999999) {
+    if (
+        k >= 0.999999
+    ) {
 
         return {
 
@@ -410,11 +354,18 @@ document
                     );
 
 
+                if (!element) {
+                    return;
+                }
+
+
                 try {
 
-                    await navigator.clipboard.writeText(
-                        element.textContent
-                    );
+                    await navigator
+                        .clipboard
+                        .writeText(
+                            element.textContent
+                        );
 
 
                     const original =
@@ -425,15 +376,12 @@ document
                         "✓";
 
 
-                    setTimeout(
-                        () => {
+                    setTimeout(() => {
 
-                            button.textContent =
-                                original;
+                        button.textContent =
+                            original;
 
-                        },
-                        800
-                    );
+                    }, 800);
 
                 }
 
@@ -450,19 +398,3 @@ document
         );
 
     });
-
-
-/* =================================
-   START
-================================= */
-
-/*
- * Attempt to start automatically.
- *
- * NOTE:
- * EyeDropper requires a user gesture,
- * so the browser may reject this when
- * the side panel is opened automatically.
- */
-
-startPicker();
