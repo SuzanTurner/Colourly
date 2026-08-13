@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Colourly</title>
+
+    <link
+        rel="stylesheet"
+        href="popup.css"
+    >
+
+</head>
+
+
+<body>
+
+    <main class="container">
+
+        <!-- Header -->
+
+        <header>
+
+            <div class="brand">
+
+                <div class="logo-mark">
+                    ✦
+                </div>
+
+                <span>
+                    Colourly
+                </span>
+
+            </div>
+
+            <p>
+                Pick any colour from your screen.
+            </p>
+
+        </header>
+
+
+        <!-- Colour Preview -->
+
+        <section class="colour-card">
+
+            <div
+                id="colour-preview"
+                class="colour-preview"
+            ></div>
+
+
+            <button
+                id="pick-button"
+                class="pick-button"
+            >
+                <span>＋</span>
+                Pick Colour
+            </button>
+
+        </section>
+
+
+        <!-- Colour Values -->
+
+        <section class="values-card">
+
+
+            <!-- HEX -->
+
+            <div class="value-row">
+
+                <div>
+
+                    <span class="label">
+                        HEX
+                    </span>
+
+                    <strong id="hex-value">
+                        #FFFFFF
+                    </strong>
+
+                </div>
+
+
+                <button
+                    class="copy-button"
+                    data-copy="hex-value"
+                    aria-label="Copy HEX"
+                >
+                    ⧉
+                </button>
+
+            </div>
+
+
+            <!-- RGB -->
+
+            <div class="value-row">
+
+                <div>
+
+                    <span class="label">
+                        RGB
+                    </span>
+
+                    <strong id="rgb-value">
+                        255, 255, 255
+                    </strong>
+
+                </div>
+
+
+                <button
+                    class="copy-button"
+                    data-copy="rgb-value"
+                    aria-label="Copy RGB"
+                >
+                    ⧉
+                </button>
+
+            </div>
+
+
+            <!-- HSL -->
+
+            <div class="value-row">
+
+                <div>
+
+                    <span class="label">
+                        HSL
+                    </span>
+
+                    <strong id="hsl-value">
+                        0°, 0%, 100%
+                    </strong>
+
+                </div>
+
+
+                <button
+                    class="copy-button"
+                    data-copy="hsl-value"
+                    aria-label="Copy HSL"
+                >
+                    ⧉
+                </button>
+
+            </div>
+
+
+            <!-- CMYK -->
+
+            <div class="value-row">
+
+                <div>
+
+                    <span class="label">
+                        CMYK
+                    </span>
+
+                    <strong id="cmyk-value">
+                        0%, 0%, 0%, 0%
+                    </strong>
+
+                </div>
+
+
+                <button
+                    class="copy-button"
+                    data-copy="cmyk-value"
+                    aria-label="Copy CMYK"
+                >
+                    ⧉
+                </button>
+
+            </div>
+
+
+        </section>
+
+
+        <footer>
+            Colourly · Pick. Copy. Create.
+        </footer>
+
+    </main>
+
+
+    <script src="popup.js"></script>
+
+</body>
+
+</html>
