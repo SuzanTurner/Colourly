@@ -3,14 +3,13 @@
 
     "name": "Colourly — Colour Picker",
 
-    "version": "1.0.0",
+    "version": "2.0.0",
 
     "description": "Pick any colour from a webpage and instantly get its HEX, RGB, HSL and CMYK values.",
 
     "permissions": [
         "activeTab",
-        "scripting",
-        "sidePanel"
+        "scripting"
     ],
 
     "background": {
@@ -18,14 +17,10 @@
     },
 
     "action": {
-        "default_title": "Colourly",
+        "default_title": "Colourly — click, then pick a colour",
         "default_icon": {
             "128": "logo.png"
         }
-    },
-
-    "side_panel": {
-        "default_path": "sidepanel.html"
     },
 
     "icons": {

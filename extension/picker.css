@@ -1,0 +1,338 @@
+#colourly-widget {
+
+    all: initial;
+
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2147483647;
+
+    width: 240px;
+
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #111;
+
+    /* Colourly radial gradient */
+    background:
+        radial-gradient(
+            circle at 0% 0%,
+            rgba(
+                var(--selected-rgb, 255, 255, 255),
+                0.30
+            ),
+            rgba(
+                var(--selected-rgb, 255, 255, 255),
+                0.10
+            ) 45%,
+            rgba(255, 255, 255, 0) 70%
+        ),
+        radial-gradient(
+            circle at 100% 100%,
+            rgba(
+                var(--selected-rgb, 255, 255, 255),
+                0.30
+            ),
+            rgba(
+                var(--selected-rgb, 255, 255, 255),
+                0.10
+            ) 45%,
+            rgba(255, 255, 255, 0) 70%
+        ),
+        #ffffff;
+
+    border-radius: 16px;
+
+    padding: 14px;
+
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.18);
+
+    display: block;
+
+    cursor: grab;
+    user-select: none;
+
+    box-sizing: border-box;
+
+}
+
+
+/* =================================
+   DRAGGING
+================================= */
+
+#colourly-widget.cw-dragging {
+    cursor: grabbing;
+}
+
+
+/* =================================
+   GLOBAL BOX SIZING
+================================= */
+
+#colourly-widget *,
+#colourly-widget *::before,
+#colourly-widget *::after {
+    box-sizing: border-box;
+}
+
+
+/* =================================
+   BUTTONS
+================================= */
+
+#colourly-widget button {
+    cursor: pointer;
+}
+
+
+/* =================================
+   CLOSE
+================================= */
+
+#colourly-widget .cw-close {
+
+    all: unset;
+
+    position: absolute;
+
+    top: 8px;
+    right: 10px;
+
+    width: 20px;
+    height: 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 16px;
+
+    color: #aaa;
+
+    cursor: pointer;
+
+    line-height: 1;
+
+}
+
+#colourly-widget .cw-close:hover {
+    color: #666;
+}
+
+
+/* =================================
+   TOP
+================================= */
+
+#colourly-widget .cw-top {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    margin-bottom: 8px;
+
+}
+
+
+/* =================================
+   SWATCH
+================================= */
+
+#colourly-widget .cw-swatch {
+
+    width: 44px;
+    height: 44px;
+
+    border-radius: 12px;
+
+    flex-shrink: 0;
+
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+
+}
+
+
+/* =================================
+   HEX
+================================= */
+
+#colourly-widget .cw-hex {
+
+    flex: 1;
+
+    min-width: 0;
+
+}
+
+
+#colourly-widget .cw-hexrow {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 6px;
+
+}
+
+
+#colourly-widget .cw-hexrow strong {
+
+    font-size: 17px;
+
+    font-weight: 700;
+
+}
+
+
+/* =================================
+   LABEL
+================================= */
+
+#colourly-widget .cw-label {
+
+    display: block;
+
+    color: #999;
+
+    font-size: 10px;
+
+    font-weight: 600;
+
+    letter-spacing: 0.5px;
+
+    margin-bottom: 2px;
+
+}
+
+
+/* =================================
+   VALUE ROWS
+================================= */
+
+#colourly-widget .cw-rows {
+
+    border-top: 1px solid #f0f0f0;
+
+    padding-top: 6px;
+
+}
+
+
+#colourly-widget .cw-row {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 6px;
+
+    padding: 6px 0;
+
+}
+
+
+#colourly-widget .cw-row strong {
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+}
+
+
+/* =================================
+   COPY BUTTON
+================================= */
+
+#colourly-widget .cw-copy {
+
+    all: unset;
+
+    width: 26px;
+    height: 26px;
+
+    flex: 0 0 26px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 7px;
+
+    background: #f3f3f4;
+
+    color: #666;
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    box-sizing: border-box;
+
+}
+
+
+#colourly-widget .cw-copy:hover {
+    background: #e8e8e8;
+}
+
+
+/* =================================
+   PICK AGAIN
+================================= */
+
+#colourly-widget .cw-pick-again {
+
+    all: unset;
+
+    /* IMPORTANT */
+    display: flex;
+
+    width: 100%;
+    height: 40px;
+
+    box-sizing: border-box;
+
+    margin: 10px 0 0 0;
+
+    padding: 0;
+
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+
+    border-radius: 9px;
+
+    background: #111;
+
+    color: #fff;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    line-height: 1;
+
+    cursor: pointer;
+
+}
+
+
+#colourly-widget .cw-pick-again:hover {
+    opacity: 0.88;
+}
