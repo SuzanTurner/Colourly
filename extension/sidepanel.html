@@ -15,7 +15,7 @@
 
     <link
         rel="stylesheet"
-        href="popup.css"
+        href="sidepanel.css"
     >
 
 </head>
@@ -25,19 +25,20 @@
 
     <main class="container">
 
+
         <!-- Header -->
 
         <header>
 
             <div class="brand">
 
-                <div class="logo-mark">
-                    ✦
-                </div>
+                <img
+                    src="logo.png"
+                    class="logo"
+                    alt="Colourly"
+                >
 
-                <span>
-                    Colourly
-                </span>
+                <span>Colourly</span>
 
             </div>
 
@@ -48,7 +49,7 @@
         </header>
 
 
-        <!-- Colour Preview -->
+        <!-- Preview -->
 
         <section class="colour-card">
 
@@ -62,19 +63,20 @@
                 id="pick-button"
                 class="pick-button"
             >
+
                 <span>＋</span>
+
                 Pick Colour
+
             </button>
 
         </section>
 
 
-        <!-- Colour Values -->
+        <!-- Values -->
 
         <section class="values-card">
 
-
-            <!-- HEX -->
 
             <div class="value-row">
 
@@ -94,15 +96,12 @@
                 <button
                     class="copy-button"
                     data-copy="hex-value"
-                    aria-label="Copy HEX"
                 >
                     ⧉
                 </button>
 
             </div>
 
-
-            <!-- RGB -->
 
             <div class="value-row">
 
@@ -122,15 +121,12 @@
                 <button
                     class="copy-button"
                     data-copy="rgb-value"
-                    aria-label="Copy RGB"
                 >
                     ⧉
                 </button>
 
             </div>
 
-
-            <!-- HSL -->
 
             <div class="value-row">
 
@@ -150,15 +146,12 @@
                 <button
                     class="copy-button"
                     data-copy="hsl-value"
-                    aria-label="Copy HSL"
                 >
                     ⧉
                 </button>
 
             </div>
 
-
-            <!-- CMYK -->
 
             <div class="value-row">
 
@@ -178,7 +171,6 @@
                 <button
                     class="copy-button"
                     data-copy="cmyk-value"
-                    aria-label="Copy CMYK"
                 >
                     ⧉
                 </button>
@@ -193,10 +185,11 @@
             Colourly · Pick. Copy. Create.
         </footer>
 
+
     </main>
 
 
-    <script src="popup.js"></script>
+    <script src="sidepanel.js"></script>
 
 </body>
 

@@ -1,20 +1,29 @@
 {
     "manifest_version": 3,
+
     "name": "Colourly — Colour Picker",
+
     "version": "1.0.0",
-    "description": "Pick any colour from a webpage and instantly get its HEX, RGB, HSL and CMYK values.",
+
+    "description": "Pick any colour from a webpage and instantly get its HEX, RGB, HSL, and CMYK values.",
+
+    "permissions": [
+        "sidePanel"
+    ],
+
+    "background": {
+        "service_worker": "background.js"
+    },
 
     "action": {
-        "default_popup": "popup.html",
-        "default_title": "Colourly",
-        "default_icon": {
-            "128": "icon.png"
-        }
+        "default_title": "Open Colourly"
+    },
+
+    "side_panel": {
+        "default_path": "sidepanel.html"
     },
 
     "icons": {
         "128": "icon.png"
-    },
-
-    "permissions": []
+    }
 }

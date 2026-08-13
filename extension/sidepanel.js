@@ -4,7 +4,6 @@ const pickButton =
 const colourPreview =
     document.getElementById("colour-preview");
 
-
 const hexValue =
     document.getElementById("hex-value");
 
@@ -24,7 +23,7 @@ const cmykValue =
 
 pickButton.addEventListener(
     "click",
-    async function () {
+    async () => {
 
         if (!window.EyeDropper) {
 
@@ -33,7 +32,6 @@ pickButton.addEventListener(
             );
 
             return;
-
         }
 
 
@@ -43,34 +41,17 @@ pickButton.addEventListener(
                 new EyeDropper();
 
 
-            /*
-             * Open browser colour picker.
-             */
-
             const result =
                 await eyeDropper.open();
 
-
-            /*
-             * Result looks like:
-             *
-             * { sRGBHex: "#9A8F54" }
-             */
 
             updateColour(
                 result.sRGBHex
             );
 
-
         }
 
         catch (error) {
-
-            /*
-             * User pressed Escape.
-             *
-             * Don't show an error.
-             */
 
             console.log(
                 "Colour selection cancelled."
@@ -112,49 +93,25 @@ function updateColour(hex) {
         );
 
 
-    /*
-     * Preview
-     */
-
     colourPreview.style.backgroundColor =
         hex;
 
-
-    /*
-     * HEX
-     */
 
     hexValue.textContent =
         hex;
 
 
-    /*
-     * RGB
-     */
-
     rgbValue.textContent =
         `${rgb.r}, ${rgb.g}, ${rgb.b}`;
 
-
-    /*
-     * HSL
-     */
 
     hslValue.textContent =
         `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
 
 
-    /*
-     * CMYK
-     */
-
     cmykValue.textContent =
         `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`;
 
-
-    /*
-     * Update Colourly background.
-     */
 
     document.body.style.setProperty(
         "--selected-rgb",
@@ -171,10 +128,7 @@ function updateColour(hex) {
 function hexToRgb(hex) {
 
     const value =
-        hex.replace(
-            "#",
-            ""
-        );
+        hex.replace("#", "");
 
 
     return {
@@ -218,6 +172,7 @@ function rgbToHsl(r, g, b) {
 
 
     let h = 0;
+
     let s = 0;
 
 
@@ -251,8 +206,7 @@ function rgbToHsl(r, g, b) {
             case g:
 
                 h =
-                    (b - r) / d +
-                    2;
+                    (b - r) / d + 2;
 
                 break;
 
@@ -260,8 +214,7 @@ function rgbToHsl(r, g, b) {
             case b:
 
                 h =
-                    (r - g) / d +
-                    4;
+                    (r - g) / d + 4;
 
                 break;
 
@@ -275,17 +228,11 @@ function rgbToHsl(r, g, b) {
 
     return {
 
-        h: Math.round(
-            h * 360
-        ),
+        h: Math.round(h * 360),
 
-        s: Math.round(
-            s * 100
-        ),
+        s: Math.round(s * 100),
 
-        l: Math.round(
-            l * 100
-        )
+        l: Math.round(l * 100)
 
     };
 
@@ -298,70 +245,52 @@ function rgbToHsl(r, g, b) {
 
 function rgbToCmyk(r, g, b) {
 
-    const red =
+    const R =
         r / 255;
 
-    const green =
+    const G =
         g / 255;
 
-    const blue =
+    const B =
         b / 255;
 
 
     const k =
         1 -
         Math.max(
-            red,
-            green,
-            blue
+            R,
+            G,
+            B
         );
 
-
-    /*
-     * Pure black.
-     */
 
     if (k >= 0.999999) {
 
         return {
-
             c: 0,
             m: 0,
             y: 0,
             k: 100
-
         };
 
     }
 
 
-    const c =
-        (1 - red - k) /
-        (1 - k);
-
-
-    const m =
-        (1 - green - k) /
-        (1 - k);
-
-
-    const y =
-        (1 - blue - k) /
-        (1 - k);
-
-
     return {
 
         c: Math.round(
-            c * 100
+            ((1 - R - k) /
+                (1 - k)) * 100
         ),
 
         m: Math.round(
-            m * 100
+            ((1 - G - k) /
+                (1 - k)) * 100
         ),
 
         y: Math.round(
-            y * 100
+            ((1 - B - k) /
+                (1 - k)) * 100
         ),
 
         k: Math.round(
@@ -374,62 +303,44 @@ function rgbToCmyk(r, g, b) {
 
 
 /* ================================
-   COPY VALUES
+   COPY
 ================================ */
 
 document
     .querySelectorAll(".copy-button")
-    .forEach(
-        button => {
+    .forEach(button => {
 
-            button.addEventListener(
-                "click",
-                async function () {
+        button.addEventListener(
+            "click",
+            async () => {
 
-                    const target =
-                        document.getElementById(
-                            this.dataset.copy
-                        );
-
-
-                    try {
-
-                        await navigator.clipboard.writeText(
-                            target.textContent
-                        );
+                const element =
+                    document.getElementById(
+                        button.dataset.copy
+                    );
 
 
-                        const original =
-                            this.textContent;
+                await navigator.clipboard.writeText(
+                    element.textContent
+                );
 
 
-                        this.textContent =
-                            "✓";
+                const oldText =
+                    button.textContent;
 
 
-                        setTimeout(
-                            () => {
+                button.textContent =
+                    "✓";
 
-                                this.textContent =
-                                    original;
 
-                            },
-                            900
-                        );
+                setTimeout(() => {
 
-                    }
+                    button.textContent =
+                        oldText;
 
-                    catch (error) {
+                }, 800);
 
-                        console.error(
-                            "Copy failed:",
-                            error
-                        );
+            }
+        );
 
-                    }
-
-                }
-            );
-
-        }
-    );
+    });
