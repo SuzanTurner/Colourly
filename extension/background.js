@@ -2,7 +2,7 @@ let offscreenCreating = null;
 
 
 /* =================================
-   CREATE OFFSCREEN DOCUMENT
+   OFFSCREEN DOCUMENT
 ================================= */
 
 async function ensureOffscreenDocument() {
@@ -36,7 +36,7 @@ async function ensureOffscreenDocument() {
             ],
 
             justification:
-                "Capture the active tab and sample colours under the mouse cursor."
+                "Sample colours from the active browser tab."
 
         });
 
@@ -49,7 +49,7 @@ async function ensureOffscreenDocument() {
 
 
 /* =================================
-   EXTENSION CLICK
+   EXTENSION BUTTON
 ================================= */
 
 chrome.action.onClicked.addListener(
@@ -62,54 +62,99 @@ chrome.action.onClicked.addListener(
             }
 
 
-            /*
-             * Open Colourly side panel.
-             */
+            console.log(
+                "Colourly activated on tab:",
+                tab.id
+            );
+
+
+            /* -------------------------
+               Open side panel
+            ------------------------- */
 
             await chrome.sidePanel.open({
-                windowId: tab.windowId
+                tabId: tab.id
             });
 
 
-            /*
-             * Create offscreen document.
-             */
+            /* -------------------------
+               Inject mouse tracker
+            ------------------------- */
+
+            await chrome.scripting.executeScript({
+
+                target: {
+                    tabId: tab.id
+                },
+
+                files: [
+                    "content.js"
+                ]
+
+            });
+
+
+            console.log(
+                "content.js injected"
+            );
+
+
+            /* -------------------------
+               Create offscreen document
+            ------------------------- */
 
             await ensureOffscreenDocument();
 
 
-            /*
-             * Get stream for this tab.
-             */
+            console.log(
+                "Offscreen document ready"
+            );
+
+
+            /* -------------------------
+               Get tab stream
+            ------------------------- */
 
             const streamId =
                 await chrome.tabCapture
                     .getMediaStreamId({
-                        targetTabId: tab.id
+
+                        targetTabId:
+                            tab.id
+
                     });
 
 
-            /*
-             * Tell offscreen document
-             * to start capturing.
-             */
+            console.log(
+                "Stream ID obtained"
+            );
+
+
+            /* -------------------------
+               Start capture
+            ------------------------- */
 
             await chrome.runtime.sendMessage({
 
-                type: "START_CAPTURE",
+                type:
+                    "START_CAPTURE",
 
-                streamId: streamId,
-
-                tabId: tab.id
+                streamId:
+                    streamId
 
             });
+
+
+            console.log(
+                "Capture started"
+            );
 
         }
 
         catch (error) {
 
             console.error(
-                "Colourly failed to start:",
+                "COLOURLY START ERROR:",
                 error
             );
 
@@ -120,51 +165,45 @@ chrome.action.onClicked.addListener(
 
 
 /* =================================
-   FORWARD MOUSE POSITION
+   POINTER → OFFSCREEN
 ================================= */
 
 chrome.runtime.onMessage.addListener(
-    (message, sender) => {
+    (message) => {
 
         if (
-            message.type ===
+            message.type !==
             "POINTER"
         ) {
-
-            /*
-             * Forward pointer coordinates
-             * to offscreen document.
-             */
-
-            chrome.runtime.sendMessage({
-
-                type: "POINTER",
-
-                x: message.x,
-
-                y: message.y,
-
-                viewportWidth:
-                    message.viewportWidth,
-
-                viewportHeight:
-                    message.viewportHeight,
-
-                tabId:
-                    sender.tab
-                        ? sender.tab.id
-                        : null
-
-            });
-
+            return;
         }
+
+
+        chrome.runtime.sendMessage({
+
+            type:
+                "POINTER",
+
+            x:
+                message.x,
+
+            y:
+                message.y,
+
+            viewportWidth:
+                message.viewportWidth,
+
+            viewportHeight:
+                message.viewportHeight
+
+        });
 
     }
 );
 
 
 /* =================================
-   RECEIVE COLOUR FROM OFFSCREEN
+   COLOUR → SIDE PANEL
 ================================= */
 
 chrome.runtime.onMessage.addListener(
@@ -178,19 +217,19 @@ chrome.runtime.onMessage.addListener(
         }
 
 
-        /*
-         * Send colour to the side panel.
-         */
-
         chrome.runtime.sendMessage({
 
-            type: "COLOUR_UPDATE",
+            type:
+                "COLOUR_UPDATE",
 
-            r: message.r,
+            r:
+                message.r,
 
-            g: message.g,
+            g:
+                message.g,
 
-            b: message.b
+            b:
+                message.b
 
         });
 

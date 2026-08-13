@@ -1,3 +1,8 @@
+console.log(
+    "Colourly content script loaded."
+);
+
+
 let lastX = -1;
 let lastY = -1;
 
@@ -5,7 +10,7 @@ let lastSent = 0;
 
 
 /*
- * 30 updates per second.
+ * Approximately 30 updates/second.
  */
 
 const UPDATE_INTERVAL = 33;
@@ -19,10 +24,6 @@ document.addEventListener(
             performance.now();
 
 
-        /*
-         * Limit update frequency.
-         */
-
         if (
             now - lastSent <
             UPDATE_INTERVAL
@@ -30,10 +31,6 @@ document.addEventListener(
             return;
         }
 
-
-        /*
-         * Ignore if mouse hasn't moved.
-         */
 
         if (
             event.clientX === lastX &&
@@ -45,6 +42,7 @@ document.addEventListener(
 
         lastSent = now;
 
+
         lastX =
             event.clientX;
 
@@ -54,11 +52,14 @@ document.addEventListener(
 
         chrome.runtime.sendMessage({
 
-            type: "POINTER",
+            type:
+                "POINTER",
 
-            x: event.clientX,
+            x:
+                event.clientX,
 
-            y: event.clientY,
+            y:
+                event.clientY,
 
             viewportWidth:
                 window.innerWidth,
@@ -71,5 +72,4 @@ document.addEventListener(
     },
 
     true
-
 );

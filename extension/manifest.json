@@ -11,7 +11,8 @@
         "sidePanel",
         "tabCapture",
         "offscreen",
-        "activeTab"
+        "activeTab",
+        "scripting"
     ],
 
     "background": {
@@ -28,17 +29,6 @@
     "side_panel": {
         "default_path": "sidepanel.html"
     },
-
-    "content_scripts": [
-        {
-            "matches": [
-                "<all_urls>"
-            ],
-            "js": [
-                "content.js"
-            ]
-        }
-    ],
 
     "icons": {
         "128": "logo.png"
