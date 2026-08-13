@@ -1,6 +1,3 @@
-const pickButton =
-    document.getElementById("pick-button");
-
 const colourPreview =
     document.getElementById("colour-preview");
 
@@ -17,145 +14,103 @@ const cmykValue =
     document.getElementById("cmyk-value");
 
 
-/* ================================
-   PICK COLOUR
-================================ */
+/* =================================
+   RECEIVE LIVE COLOUR
+================================= */
 
-pickButton.addEventListener(
-    "click",
-    async () => {
+chrome.runtime.onMessage.addListener((message) => {
 
-        if (!window.EyeDropper) {
-
-            alert(
-                "Your browser does not support the EyeDropper API."
-            );
-
-            return;
-        }
-
-
-        try {
-
-            const eyeDropper =
-                new EyeDropper();
-
-
-            const result =
-                await eyeDropper.open();
-
-
-            updateColour(
-                result.sRGBHex
-            );
-
-        }
-
-        catch (error) {
-
-            console.log(
-                "Colour selection cancelled."
-            );
-
-        }
-
+    if (message.type !== "COLOUR_UPDATE") {
+        return;
     }
-);
+
+    updateColour(
+        message.r,
+        message.g,
+        message.b
+    );
+
+});
 
 
-/* ================================
+/* =================================
    UPDATE COLOUR
-================================ */
+================================= */
 
-function updateColour(hex) {
+function updateColour(r, g, b) {
 
-    hex =
-        hex.toUpperCase();
-
-
-    const rgb =
-        hexToRgb(hex);
-
+    const hex =
+        rgbToHex(r, g, b);
 
     const hsl =
-        rgbToHsl(
-            rgb.r,
-            rgb.g,
-            rgb.b
-        );
-
+        rgbToHsl(r, g, b);
 
     const cmyk =
-        rgbToCmyk(
-            rgb.r,
-            rgb.g,
-            rgb.b
-        );
+        rgbToCmyk(r, g, b);
 
+
+    /* -----------------------------
+       Colour preview
+    ----------------------------- */
 
     colourPreview.style.backgroundColor =
         hex;
 
 
+    /* -----------------------------
+       Values
+    ----------------------------- */
+
     hexValue.textContent =
         hex;
 
-
     rgbValue.textContent =
-        `${rgb.r}, ${rgb.g}, ${rgb.b}`;
-
+        `${r}, ${g}, ${b}`;
 
     hslValue.textContent =
         `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
-
 
     cmykValue.textContent =
         `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`;
 
 
+    /* -----------------------------
+       Colourly background
+    ----------------------------- */
+
     document.body.style.setProperty(
         "--selected-rgb",
-        `${rgb.r}, ${rgb.g}, ${rgb.b}`
+        `${r}, ${g}, ${b}`
     );
 
 }
 
 
-/* ================================
-   HEX → RGB
-================================ */
+/* =================================
+   RGB → HEX
+================================= */
 
-function hexToRgb(hex) {
+function rgbToHex(r, g, b) {
 
-    const value =
-        hex.replace("#", "");
+    return (
+        "#" +
 
-
-    return {
-
-        r: parseInt(
-            value.substring(0, 2),
-            16
-        ),
-
-        g: parseInt(
-            value.substring(2, 4),
-            16
-        ),
-
-        b: parseInt(
-            value.substring(4, 6),
-            16
-        )
-
-    };
+        [r, g, b]
+            .map(value =>
+                value
+                    .toString(16)
+                    .padStart(2, "0")
+            )
+            .join("")
+            .toUpperCase()
+    );
 
 }
 
 
-/* ================================
+/* =================================
    RGB → HSL
-================================ */
+================================= */
 
 function rgbToHsl(r, g, b) {
 
@@ -172,7 +127,6 @@ function rgbToHsl(r, g, b) {
 
 
     let h = 0;
-
     let s = 0;
 
 
@@ -239,30 +193,23 @@ function rgbToHsl(r, g, b) {
 }
 
 
-/* ================================
+/* =================================
    RGB → CMYK
-================================ */
+================================= */
 
 function rgbToCmyk(r, g, b) {
 
-    const R =
-        r / 255;
-
-    const G =
-        g / 255;
-
-    const B =
-        b / 255;
+    const R = r / 255;
+    const G = g / 255;
+    const B = b / 255;
 
 
     const k =
         1 -
-        Math.max(
-            R,
-            G,
-            B
-        );
+        Math.max(R, G, B);
 
+
+    /* Pure black */
 
     if (k >= 0.999999) {
 
@@ -276,35 +223,37 @@ function rgbToCmyk(r, g, b) {
     }
 
 
+    const c =
+        (1 - R - k) /
+        (1 - k);
+
+    const m =
+        (1 - G - k) /
+        (1 - k);
+
+    const y =
+        (1 - B - k) /
+        (1 - k);
+
+
     return {
 
-        c: Math.round(
-            ((1 - R - k) /
-                (1 - k)) * 100
-        ),
+        c: Math.round(c * 100),
 
-        m: Math.round(
-            ((1 - G - k) /
-                (1 - k)) * 100
-        ),
+        m: Math.round(m * 100),
 
-        y: Math.round(
-            ((1 - B - k) /
-                (1 - k)) * 100
-        ),
+        y: Math.round(y * 100),
 
-        k: Math.round(
-            k * 100
-        )
+        k: Math.round(k * 100)
 
     };
 
 }
 
 
-/* ================================
-   COPY
-================================ */
+/* =================================
+   COPY VALUES
+================================= */
 
 document
     .querySelectorAll(".copy-button")
@@ -320,25 +269,43 @@ document
                     );
 
 
-                await navigator.clipboard.writeText(
-                    element.textContent
-                );
+                if (!element) {
+                    return;
+                }
 
 
-                const oldText =
-                    button.textContent;
+                try {
+
+                    await navigator.clipboard.writeText(
+                        element.textContent
+                    );
 
 
-                button.textContent =
-                    "✓";
+                    const oldText =
+                        button.textContent;
 
-
-                setTimeout(() => {
 
                     button.textContent =
-                        oldText;
+                        "✓";
 
-                }, 800);
+
+                    setTimeout(() => {
+
+                        button.textContent =
+                            oldText;
+
+                    }, 800);
+
+                }
+
+                catch (error) {
+
+                    console.error(
+                        "Copy failed:",
+                        error
+                    );
+
+                }
 
             }
         );

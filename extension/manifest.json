@@ -8,7 +8,10 @@
     "description": "Pick any colour from a webpage and instantly get its HEX, RGB, HSL, and CMYK values.",
 
     "permissions": [
-        "sidePanel"
+        "sidePanel",
+        "tabCapture",
+        "offscreen",
+        "activeTab"
     ],
 
     "background": {
@@ -16,12 +19,23 @@
     },
 
     "action": {
-        "default_title": "Open Colourly"
+        "default_title": "Colourly"
     },
 
     "side_panel": {
         "default_path": "sidepanel.html"
     },
+
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
 
     "icons": {
         "128": "icon.png"
