@@ -19,13 +19,11 @@ const ctx =
     );
 
 
-let stream = null;
-
 let videoReady = false;
 
 
 /* =================================
-   START CAPTURE
+   RECEIVE MESSAGES
 ================================= */
 
 chrome.runtime.onMessage.addListener(
@@ -59,7 +57,7 @@ chrome.runtime.onMessage.addListener(
 
 
 /* =================================
-   CREATE VIDEO STREAM
+   START TAB CAPTURE
 ================================= */
 
 async function startCapture(
@@ -68,8 +66,25 @@ async function startCapture(
 
     try {
 
-        stream =
-            await navigator.mediaDevices
+        /*
+         * Stop previous stream if any.
+         */
+
+        if (video.srcObject) {
+
+            video.srcObject
+                .getTracks()
+                .forEach(
+                    track =>
+                        track.stop()
+                );
+
+        }
+
+
+        const stream =
+            await navigator
+                .mediaDevices
                 .getUserMedia({
 
                     audio: false,
@@ -102,16 +117,19 @@ async function startCapture(
 
 
         console.log(
-            "Colourly live capture started."
+            "Colourly capture ready:",
+            video.videoWidth,
+            video.videoHeight
         );
-
 
     }
 
     catch (error) {
 
+        videoReady = false;
+
         console.error(
-            "Could not start tab capture:",
+            "Colourly capture error:",
             error
         );
 
@@ -124,12 +142,14 @@ async function startCapture(
    SAMPLE PIXEL
 ================================= */
 
-function samplePixel(
-    data
-) {
+function samplePixel(data) {
+
+    if (!videoReady) {
+        return;
+    }
+
 
     if (
-        !videoReady ||
         video.readyState <
         HTMLMediaElement.HAVE_CURRENT_DATA
     ) {
@@ -138,25 +158,19 @@ function samplePixel(
 
 
     if (
-        !video.videoWidth ||
-        !video.videoHeight
+        video.videoWidth === 0 ||
+        video.videoHeight === 0
     ) {
         return;
     }
 
 
     /*
-     * The captured video dimensions
-     * can differ from CSS viewport size.
-     *
-     * Therefore map:
-     *
-     * browser coordinate
-     *        ↓
-     * video coordinate
+     * Convert browser coordinates
+     * to captured video coordinates.
      */
 
-    const videoX =
+    const x =
         Math.floor(
             data.x *
             (
@@ -166,7 +180,7 @@ function samplePixel(
         );
 
 
-    const videoY =
+    const y =
         Math.floor(
             data.y *
             (
@@ -177,7 +191,21 @@ function samplePixel(
 
 
     /*
-     * Sample only ONE pixel.
+     * Don't sample outside the video.
+     */
+
+    if (
+        x < 0 ||
+        y < 0 ||
+        x >= video.videoWidth ||
+        y >= video.videoHeight
+    ) {
+        return;
+    }
+
+
+    /*
+     * One-pixel canvas.
      */
 
     canvas.width = 1;
@@ -188,8 +216,8 @@ function samplePixel(
 
         video,
 
-        videoX,
-        videoY,
+        x,
+        y,
 
         1,
         1,
@@ -212,13 +240,18 @@ function samplePixel(
         ).data;
 
 
-    const r = pixel[0];
-    const g = pixel[1];
-    const b = pixel[2];
+    const r =
+        pixel[0];
+
+    const g =
+        pixel[1];
+
+    const b =
+        pixel[2];
 
 
     /*
-     * Send colour to side panel.
+     * Send colour back.
      */
 
     chrome.runtime.sendMessage({

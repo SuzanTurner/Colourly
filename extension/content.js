@@ -5,9 +5,7 @@ let lastSent = 0;
 
 
 /*
- * Send coordinates at roughly 30 FPS.
- *
- * We don't need 100+ messages per second.
+ * 30 updates per second.
  */
 
 const UPDATE_INTERVAL = 33;
@@ -21,6 +19,10 @@ document.addEventListener(
             performance.now();
 
 
+        /*
+         * Limit update frequency.
+         */
+
         if (
             now - lastSent <
             UPDATE_INTERVAL
@@ -29,51 +31,45 @@ document.addEventListener(
         }
 
 
-        lastSent = now;
-
-
-        const x =
-            event.clientX;
-
-        const y =
-            event.clientY;
-
-
         /*
-         * Don't send the same pixel repeatedly.
+         * Ignore if mouse hasn't moved.
          */
 
         if (
-            x === lastX &&
-            y === lastY
+            event.clientX === lastX &&
+            event.clientY === lastY
         ) {
             return;
         }
 
 
-        lastX = x;
-        lastY = y;
+        lastSent = now;
+
+        lastX =
+            event.clientX;
+
+        lastY =
+            event.clientY;
 
 
         chrome.runtime.sendMessage({
 
             type: "POINTER",
 
-            x: x,
+            x: event.clientX,
 
-            y: y,
+            y: event.clientY,
 
             viewportWidth:
                 window.innerWidth,
 
             viewportHeight:
-                window.innerHeight,
-
-            devicePixelRatio:
-                window.devicePixelRatio
+                window.innerHeight
 
         });
 
     },
+
     true
+
 );

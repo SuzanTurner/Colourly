@@ -1,82 +1,107 @@
 const colourPreview =
-    document.getElementById("colour-preview");
-
-const hexValue =
-    document.getElementById("hex-value");
-
-const rgbValue =
-    document.getElementById("rgb-value");
-
-const hslValue =
-    document.getElementById("hsl-value");
-
-const cmykValue =
-    document.getElementById("cmyk-value");
-
-
-/* =================================
-   RECEIVE LIVE COLOUR
-================================= */
-
-chrome.runtime.onMessage.addListener((message) => {
-
-    if (message.type !== "COLOUR_UPDATE") {
-        return;
-    }
-
-    updateColour(
-        message.r,
-        message.g,
-        message.b
+    document.getElementById(
+        "colour-preview"
     );
 
-});
+const hexValue =
+    document.getElementById(
+        "hex-value"
+    );
+
+const rgbValue =
+    document.getElementById(
+        "rgb-value"
+    );
+
+const hslValue =
+    document.getElementById(
+        "hsl-value"
+    );
+
+const cmykValue =
+    document.getElementById(
+        "cmyk-value"
+    );
 
 
 /* =================================
-   UPDATE COLOUR
+   RECEIVE COLOUR
 ================================= */
 
-function updateColour(r, g, b) {
+chrome.runtime.onMessage.addListener(
+    (message) => {
+
+        if (
+            message.type !==
+            "COLOUR_UPDATE"
+        ) {
+            return;
+        }
+
+
+        updateColour(
+            message.r,
+            message.g,
+            message.b
+        );
+
+    }
+);
+
+
+/* =================================
+   UPDATE UI
+================================= */
+
+function updateColour(
+    r,
+    g,
+    b
+) {
 
     const hex =
-        rgbToHex(r, g, b);
+        rgbToHex(
+            r,
+            g,
+            b
+        );
+
 
     const hsl =
-        rgbToHsl(r, g, b);
+        rgbToHsl(
+            r,
+            g,
+            b
+        );
+
 
     const cmyk =
-        rgbToCmyk(r, g, b);
+        rgbToCmyk(
+            r,
+            g,
+            b
+        );
 
-
-    /* -----------------------------
-       Colour preview
-    ----------------------------- */
 
     colourPreview.style.backgroundColor =
         hex;
 
 
-    /* -----------------------------
-       Values
-    ----------------------------- */
-
     hexValue.textContent =
         hex;
+
 
     rgbValue.textContent =
         `${r}, ${g}, ${b}`;
 
+
     hslValue.textContent =
         `${hsl.h}°, ${hsl.s}%, ${hsl.l}%`;
+
 
     cmykValue.textContent =
         `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`;
 
-
-    /* -----------------------------
-       Colourly background
-    ----------------------------- */
 
     document.body.style.setProperty(
         "--selected-rgb",
@@ -90,16 +115,24 @@ function updateColour(r, g, b) {
    RGB → HEX
 ================================= */
 
-function rgbToHex(r, g, b) {
+function rgbToHex(
+    r,
+    g,
+    b
+) {
 
     return (
         "#" +
 
         [r, g, b]
-            .map(value =>
-                value
-                    .toString(16)
-                    .padStart(2, "0")
+            .map(
+                value =>
+                    value
+                        .toString(16)
+                        .padStart(
+                            2,
+                            "0"
+                        )
             )
             .join("")
             .toUpperCase()
@@ -112,7 +145,11 @@ function rgbToHex(r, g, b) {
    RGB → HSL
 ================================= */
 
-function rgbToHsl(r, g, b) {
+function rgbToHsl(
+    r,
+    g,
+    b
+) {
 
     r /= 255;
     g /= 255;
@@ -120,10 +157,19 @@ function rgbToHsl(r, g, b) {
 
 
     const max =
-        Math.max(r, g, b);
+        Math.max(
+            r,
+            g,
+            b
+        );
+
 
     const min =
-        Math.min(r, g, b);
+        Math.min(
+            r,
+            g,
+            b
+        );
 
 
     let h = 0;
@@ -142,8 +188,10 @@ function rgbToHsl(r, g, b) {
 
         s =
             l > 0.5
-                ? d / (2 - max - min)
-                : d / (max + min);
+                ? d /
+                  (2 - max - min)
+                : d /
+                  (max + min);
 
 
         switch (max) {
@@ -151,7 +199,8 @@ function rgbToHsl(r, g, b) {
             case r:
 
                 h =
-                    (g - b) / d +
+                    (g - b) /
+                    d +
                     (g < b ? 6 : 0);
 
                 break;
@@ -160,7 +209,9 @@ function rgbToHsl(r, g, b) {
             case g:
 
                 h =
-                    (b - r) / d + 2;
+                    (b - r) /
+                    d +
+                    2;
 
                 break;
 
@@ -168,7 +219,9 @@ function rgbToHsl(r, g, b) {
             case b:
 
                 h =
-                    (r - g) / d + 4;
+                    (r - g) /
+                    d +
+                    4;
 
                 break;
 
@@ -182,11 +235,17 @@ function rgbToHsl(r, g, b) {
 
     return {
 
-        h: Math.round(h * 360),
+        h: Math.round(
+            h * 360
+        ),
 
-        s: Math.round(s * 100),
+        s: Math.round(
+            s * 100
+        ),
 
-        l: Math.round(l * 100)
+        l: Math.round(
+            l * 100
+        )
 
     };
 
@@ -197,7 +256,11 @@ function rgbToHsl(r, g, b) {
    RGB → CMYK
 ================================= */
 
-function rgbToCmyk(r, g, b) {
+function rgbToCmyk(
+    r,
+    g,
+    b
+) {
 
     const R = r / 255;
     const G = g / 255;
@@ -206,45 +269,55 @@ function rgbToCmyk(r, g, b) {
 
     const k =
         1 -
-        Math.max(R, G, B);
+        Math.max(
+            R,
+            G,
+            B
+        );
 
 
-    /* Pure black */
-
-    if (k >= 0.999999) {
+    if (
+        k >= 0.999999
+    ) {
 
         return {
+
             c: 0,
             m: 0,
             y: 0,
             k: 100
+
         };
 
     }
 
 
-    const c =
-        (1 - R - k) /
-        (1 - k);
-
-    const m =
-        (1 - G - k) /
-        (1 - k);
-
-    const y =
-        (1 - B - k) /
-        (1 - k);
-
-
     return {
 
-        c: Math.round(c * 100),
+        c: Math.round(
+            (
+                (1 - R - k) /
+                (1 - k)
+            ) * 100
+        ),
 
-        m: Math.round(m * 100),
+        m: Math.round(
+            (
+                (1 - G - k) /
+                (1 - k)
+            ) * 100
+        ),
 
-        y: Math.round(y * 100),
+        y: Math.round(
+            (
+                (1 - B - k) /
+                (1 - k)
+            ) * 100
+        ),
 
-        k: Math.round(k * 100)
+        k: Math.round(
+            k * 100
+        )
 
     };
 
@@ -252,62 +325,71 @@ function rgbToCmyk(r, g, b) {
 
 
 /* =================================
-   COPY VALUES
+   COPY
 ================================= */
 
 document
-    .querySelectorAll(".copy-button")
-    .forEach(button => {
+    .querySelectorAll(
+        ".copy-button"
+    )
+    .forEach(
+        button => {
 
-        button.addEventListener(
-            "click",
-            async () => {
+            button.addEventListener(
+                "click",
+                async () => {
 
-                const element =
-                    document.getElementById(
-                        button.dataset.copy
-                    );
-
-
-                if (!element) {
-                    return;
-                }
+                    const element =
+                        document.getElementById(
+                            button.dataset.copy
+                        );
 
 
-                try {
-
-                    await navigator.clipboard.writeText(
-                        element.textContent
-                    );
+                    if (!element) {
+                        return;
+                    }
 
 
-                    const oldText =
-                        button.textContent;
+                    try {
+
+                        await navigator
+                            .clipboard
+                            .writeText(
+                                element.textContent
+                            );
 
 
-                    button.textContent =
-                        "✓";
+                        const oldText =
+                            button.textContent;
 
-
-                    setTimeout(() => {
 
                         button.textContent =
-                            oldText;
+                            "✓";
 
-                    }, 800);
+
+                        setTimeout(
+                            () => {
+
+                                button.textContent =
+                                    oldText;
+
+                            },
+                            800
+                        );
+
+                    }
+
+                    catch (error) {
+
+                        console.error(
+                            "Copy failed:",
+                            error
+                        );
+
+                    }
 
                 }
+            );
 
-                catch (error) {
-
-                    console.error(
-                        "Copy failed:",
-                        error
-                    );
-
-                }
-
-            }
-        );
-
-    });
+        }
+    );

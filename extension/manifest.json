@@ -19,7 +19,10 @@
     },
 
     "action": {
-        "default_title": "Colourly"
+        "default_title": "Colourly",
+        "default_icon": {
+            "128": "logo.png"
+        }
     },
 
     "side_panel": {
@@ -38,6 +41,6 @@
     ],
 
     "icons": {
-        "128": "icon.png"
+        "128": "logo.png"
     }
 }

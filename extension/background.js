@@ -1,60 +1,55 @@
-let creatingOffscreen = null;
+let offscreenCreating = null;
 
 
-async function setupOffscreen() {
+/* =================================
+   CREATE OFFSCREEN DOCUMENT
+================================= */
 
-    const existing =
+async function ensureOffscreenDocument() {
+
+    const existingContexts =
         await chrome.runtime.getContexts({
-            contextTypes: ["OFFSCREEN_DOCUMENT"]
+            contextTypes: [
+                "OFFSCREEN_DOCUMENT"
+            ]
         });
 
 
-    if (existing.length > 0) {
+    if (existingContexts.length > 0) {
         return;
     }
 
 
-    if (creatingOffscreen) {
-        await creatingOffscreen;
+    if (offscreenCreating) {
+        await offscreenCreating;
         return;
     }
 
 
-    creatingOffscreen =
+    offscreenCreating =
         chrome.offscreen.createDocument({
 
             url: "offscreen.html",
 
-            reasons: ["USER_MEDIA"],
+            reasons: [
+                "USER_MEDIA"
+            ],
 
             justification:
-                "Continuously sample colours from the active browser tab."
+                "Capture the active tab and sample colours under the mouse cursor."
 
         });
 
 
-    await creatingOffscreen;
+    await offscreenCreating;
 
-    creatingOffscreen = null;
+    offscreenCreating = null;
 
 }
 
 
 /* =================================
-   OPEN COLOURLY
-================================= */
-
-chrome.runtime.onInstalled.addListener(() => {
-
-    chrome.sidePanel.setPanelBehavior({
-        openPanelOnActionClick: true
-    });
-
-});
-
-
-/* =================================
-   START CAPTURE
+   EXTENSION CLICK
 ================================= */
 
 chrome.action.onClicked.addListener(
@@ -62,12 +57,29 @@ chrome.action.onClicked.addListener(
 
         try {
 
-            await setupOffscreen();
+            if (!tab.id) {
+                return;
+            }
 
 
             /*
-             * Get a live stream of the
-             * currently active tab.
+             * Open Colourly side panel.
+             */
+
+            await chrome.sidePanel.open({
+                windowId: tab.windowId
+            });
+
+
+            /*
+             * Create offscreen document.
+             */
+
+            await ensureOffscreenDocument();
+
+
+            /*
+             * Get stream for this tab.
              */
 
             const streamId =
@@ -78,29 +90,109 @@ chrome.action.onClicked.addListener(
 
 
             /*
-             * Tell the offscreen document
-             * to start processing it.
+             * Tell offscreen document
+             * to start capturing.
              */
 
-            chrome.runtime.sendMessage({
+            await chrome.runtime.sendMessage({
 
                 type: "START_CAPTURE",
 
-                streamId: streamId
+                streamId: streamId,
+
+                tabId: tab.id
 
             });
-
 
         }
 
         catch (error) {
 
             console.error(
-                "Colourly capture failed:",
+                "Colourly failed to start:",
                 error
             );
 
         }
+
+    }
+);
+
+
+/* =================================
+   FORWARD MOUSE POSITION
+================================= */
+
+chrome.runtime.onMessage.addListener(
+    (message, sender) => {
+
+        if (
+            message.type ===
+            "POINTER"
+        ) {
+
+            /*
+             * Forward pointer coordinates
+             * to offscreen document.
+             */
+
+            chrome.runtime.sendMessage({
+
+                type: "POINTER",
+
+                x: message.x,
+
+                y: message.y,
+
+                viewportWidth:
+                    message.viewportWidth,
+
+                viewportHeight:
+                    message.viewportHeight,
+
+                tabId:
+                    sender.tab
+                        ? sender.tab.id
+                        : null
+
+            });
+
+        }
+
+    }
+);
+
+
+/* =================================
+   RECEIVE COLOUR FROM OFFSCREEN
+================================= */
+
+chrome.runtime.onMessage.addListener(
+    (message) => {
+
+        if (
+            message.type !==
+            "COLOUR_UPDATE"
+        ) {
+            return;
+        }
+
+
+        /*
+         * Send colour to the side panel.
+         */
+
+        chrome.runtime.sendMessage({
+
+            type: "COLOUR_UPDATE",
+
+            r: message.r,
+
+            g: message.g,
+
+            b: message.b
+
+        });
 
     }
 );
