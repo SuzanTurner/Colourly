@@ -23,17 +23,54 @@
     const FAVORITES_KEY = "colourly-favorites";
 
 
+    /*
+     * Chrome only allows one EyeDropper open at a time —
+     * calling `new EyeDropper()` while one is already
+     * pending throws, and that throw was happening silently
+     * (only visible in the page console), which is why
+     * repeat clicks on the toolbar icon looked like nothing
+     * was happening. `window` is used (not a local variable)
+     * because this whole script re-runs from scratch on
+     * every click, but `window` persists across those runs
+     * for as long as the page is open.
+     */
+
+    if (window.__colourlyPicking) {
+
+        console.log(
+            "Colourly: a pick is already in progress — move to the page and click to select a colour."
+        );
+
+        return;
+
+    }
+
+
     /* =================================
        STORAGE
+
+       chrome.storage.local is used instead of
+       localStorage. localStorage is scoped per
+       *website origin*, so history/favorites saved
+       on one site are invisible on every other site.
+       chrome.storage.local is scoped to the extension
+       itself, so the same data is shared everywhere.
+
+       It's also async (returns Promises), so these
+       functions — and everything that calls them —
+       need to be async now.
     ================================= */
 
-    function getHistory() {
+    async function getHistory() {
 
         try {
 
-            return JSON.parse(
-                localStorage.getItem(HISTORY_KEY)
-            ) || [];
+            const result =
+                await chrome.storage.local.get(
+                    HISTORY_KEY
+                );
+
+            return result[HISTORY_KEY] || [];
 
         }
 
@@ -46,23 +83,25 @@
     }
 
 
-    function saveHistory(history) {
+    async function saveHistory(history) {
 
-        localStorage.setItem(
-            HISTORY_KEY,
-            JSON.stringify(history)
-        );
+        await chrome.storage.local.set({
+            [HISTORY_KEY]: history
+        });
 
     }
 
 
-    function getFavorites() {
+    async function getFavorites() {
 
         try {
 
-            return JSON.parse(
-                localStorage.getItem(FAVORITES_KEY)
-            ) || [];
+            const result =
+                await chrome.storage.local.get(
+                    FAVORITES_KEY
+                );
+
+            return result[FAVORITES_KEY] || [];
 
         }
 
@@ -75,12 +114,11 @@
     }
 
 
-    function saveFavorites(favorites) {
+    async function saveFavorites(favorites) {
 
-        localStorage.setItem(
-            FAVORITES_KEY,
-            JSON.stringify(favorites)
-        );
+        await chrome.storage.local.set({
+            [FAVORITES_KEY]: favorites
+        });
 
     }
 
@@ -89,10 +127,10 @@
        HISTORY
     ================================= */
 
-    function addToHistory(hex) {
+    async function addToHistory(hex) {
 
         let history =
-            getHistory();
+            await getHistory();
 
 
         /*
@@ -123,7 +161,7 @@
             );
 
 
-        saveHistory(history);
+        await saveHistory(history);
 
     }
 
@@ -132,18 +170,20 @@
        FAVORITES
     ================================= */
 
-    function isFavorite(hex) {
+    async function isFavorite(hex) {
 
-        return getFavorites()
-            .includes(hex);
+        const favorites =
+            await getFavorites();
+
+        return favorites.includes(hex);
 
     }
 
 
-    function toggleFavorite(hex) {
+    async function toggleFavorite(hex) {
 
         let favorites =
-            getFavorites();
+            await getFavorites();
 
 
         if (
@@ -176,7 +216,7 @@
         }
 
 
-        saveFavorites(favorites);
+        await saveFavorites(favorites);
 
     }
 
@@ -200,6 +240,8 @@
 
         try {
 
+            window.__colourlyPicking = true;
+
             const eyeDropper =
                 new EyeDropper();
 
@@ -212,9 +254,9 @@
                 result.sRGBHex.toUpperCase();
 
 
-            addToHistory(hex);
+            await addToHistory(hex);
 
-            renderWidget(hex);
+            await renderWidget(hex);
 
         }
 
@@ -223,6 +265,12 @@
             console.log(
                 "Colourly: pick cancelled."
             );
+
+        }
+
+        finally {
+
+            window.__colourlyPicking = false;
 
         }
 
@@ -400,7 +448,7 @@
        RENDER WIDGET
     ================================= */
 
-    function renderWidget(hex) {
+    async function renderWidget(hex) {
 
         let widget =
             document.getElementById(
@@ -462,7 +510,7 @@
 
 
         const favorite =
-            isFavorite(hex);
+            await isFavorite(hex);
 
 
         /* =================================
@@ -729,9 +777,9 @@
 
             tab.addEventListener(
                 "click",
-                () => {
+                async () => {
 
-                    switchTab(
+                    await switchTab(
                         widget,
                         tab.dataset.tab,
                         currentHex
@@ -789,14 +837,14 @@
 
         star.addEventListener(
             "click",
-            () => {
+            async () => {
 
-                toggleFavorite(
+                await toggleFavorite(
                     currentHex
                 );
 
 
-                renderWidget(
+                await renderWidget(
                     currentHex
                 );
 
@@ -810,7 +858,7 @@
        SWITCH TABS
     ================================= */
 
-    function switchTab(
+    async function switchTab(
         widget,
         tabName,
         currentHex
@@ -867,7 +915,7 @@
 
             renderList(
                 favorites,
-                getFavorites(),
+                await getFavorites(),
                 "favorites",
                 currentHex
             );
@@ -881,7 +929,7 @@
 
             renderList(
                 history,
-                getHistory(),
+                await getHistory(),
                 "history",
                 currentHex
             );
@@ -1070,7 +1118,7 @@ if (type === "favorites") {
 
             button.addEventListener(
                 "click",
-                event => {
+                async event => {
 
                     event.stopPropagation();
 
@@ -1078,7 +1126,7 @@ if (type === "favorites") {
                         button.dataset.value;
 
                     let favorites =
-                        getFavorites();
+                        await getFavorites();
 
                     favorites =
                         favorites.filter(
@@ -1086,7 +1134,7 @@ if (type === "favorites") {
                                 item !== colour
                         );
 
-                    saveFavorites(
+                    await saveFavorites(
                         favorites
                     );
 
@@ -1099,7 +1147,7 @@ if (type === "favorites") {
 
                     renderList(
                         container,
-                        getFavorites(),
+                        await getFavorites(),
                         "favorites",
                         currentHex
                     );
@@ -1122,18 +1170,18 @@ if (type === "favorites") {
 
                 item.addEventListener(
                     "click",
-                    () => {
+                    async () => {
 
                         const colour =
                             item.dataset.colour;
 
 
-                        addToHistory(
+                        await addToHistory(
                             colour
                         );
 
 
-                        renderWidget(
+                        await renderWidget(
                             colour
                         );
 
@@ -1176,7 +1224,7 @@ if (type === "favorites") {
             )
             .addEventListener(
                 "click",
-                event => {
+                async event => {
 
                     event.stopPropagation();
 
@@ -1185,7 +1233,7 @@ if (type === "favorites") {
                         type === "history"
                     ) {
 
-                        localStorage.removeItem(
+                        await chrome.storage.local.remove(
                             HISTORY_KEY
                         );
 
@@ -1193,14 +1241,14 @@ if (type === "favorites") {
 
                     else {
 
-                        localStorage.removeItem(
+                        await chrome.storage.local.remove(
                             FAVORITES_KEY
                         );
 
                     }
 
 
-                    switchTab(
+                    await switchTab(
                         container.closest(
                             "#colourly-widget"
                         ),

@@ -8,17 +8,29 @@ chrome.action.onClicked.addListener(async (tab) => {
 
     try {
 
-        await chrome.scripting.executeScript({
+        /*
+         * Fire CSS + JS injection together instead of
+         * awaiting one after the other. Sequential awaits
+         * add delay between your click and the EyeDropper
+         * opening, and that gap can be enough for Chrome to
+         * treat the picker as no longer "attached" to your
+         * click gesture.
+         */
 
-            target: {
-                tabId: tab.id
-            },
+        await Promise.all([
 
-            files: [
-                "picker.js"
-            ]
+            chrome.scripting.insertCSS({
+                target: { tabId: tab.id },
+                files: ["picker.css"]
+            }),
 
-        });
+            chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ["picker.js"],
+                injectImmediately: true
+            })
+
+        ]);
 
         console.log("Colourly picker started.");
 
@@ -34,4 +46,3 @@ chrome.action.onClicked.addListener(async (tab) => {
     }
 
 });
-
