@@ -24,62 +24,126 @@ const cmykValue =
     );
 
 
+let picking = false;
+
+
 /* =================================
-   RECEIVE COLOUR
+   START EYE DROPPER
 ================================= */
 
-chrome.runtime.onMessage.addListener(
-    (message) => {
+async function startPicker() {
 
-        if (
-            message.type !==
-            "COLOUR_UPDATE"
-        ) {
-            return;
-        }
+    if (!window.EyeDropper) {
 
+        console.error(
+            "EyeDropper API is not supported."
+        );
+
+        return;
+
+    }
+
+
+    if (picking) {
+        return;
+    }
+
+
+    picking = true;
+
+
+    try {
+
+        const eyeDropper =
+            new EyeDropper();
+
+
+        /*
+         * Wait for the user to click
+         * a colour on the screen.
+         */
+
+        const result =
+            await eyeDropper.open();
+
+
+        /*
+         * Example:
+         *
+         * #9A8F54
+         */
 
         updateColour(
-            message.r,
-            message.g,
-            message.b
+            result.sRGBHex
+        );
+
+
+    }
+
+    catch (error) {
+
+        /*
+         * Escape / cancellation.
+         */
+
+        console.log(
+            "Picker cancelled."
         );
 
     }
-);
+
+
+    picking = false;
+
+
+    /*
+     * Automatically reopen the
+     * picker after a selection.
+     *
+     * Small delay prevents the browser
+     * from treating this as the same
+     * interaction.
+     */
+
+    setTimeout(
+        () => {
+
+            startPicker();
+
+        },
+        100
+    );
+
+}
 
 
 /* =================================
-   UPDATE UI
+   UPDATE COLOUR
 ================================= */
 
-function updateColour(
-    r,
-    g,
-    b
-) {
+function updateColour(hex) {
 
-    const hex =
-        rgbToHex(
-            r,
-            g,
-            b
-        );
+    hex =
+        hex.toUpperCase();
+
+
+    const rgb =
+        hexToRgb(hex);
 
 
     const hsl =
         rgbToHsl(
-            r,
-            g,
-            b
+            rgb.r,
+            rgb.g,
+            rgb.b
         );
 
 
     const cmyk =
         rgbToCmyk(
-            r,
-            g,
-            b
+            rgb.r,
+            rgb.g,
+            rgb.b
         );
 
 
@@ -92,7 +156,7 @@ function updateColour(
 
 
     rgbValue.textContent =
-        `${r}, ${g}, ${b}`;
+        `${rgb.r}, ${rgb.g}, ${rgb.b}`;
 
 
     hslValue.textContent =
@@ -103,40 +167,52 @@ function updateColour(
         `${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%`;
 
 
+    /*
+     * Colourly gradient background.
+     */
+
     document.body.style.setProperty(
+
         "--selected-rgb",
-        `${r}, ${g}, ${b}`
+
+        `${rgb.r}, ${rgb.g}, ${rgb.b}`
+
     );
 
 }
 
 
 /* =================================
-   RGB → HEX
+   HEX → RGB
 ================================= */
 
-function rgbToHex(
-    r,
-    g,
-    b
-) {
+function hexToRgb(hex) {
 
-    return (
-        "#" +
+    const value =
+        hex.replace(
+            "#",
+            ""
+        );
 
-        [r, g, b]
-            .map(
-                value =>
-                    value
-                        .toString(16)
-                        .padStart(
-                            2,
-                            "0"
-                        )
-            )
-            .join("")
-            .toUpperCase()
-    );
+
+    return {
+
+        r: parseInt(
+            value.substring(0, 2),
+            16
+        ),
+
+        g: parseInt(
+            value.substring(2, 4),
+            16
+        ),
+
+        b: parseInt(
+            value.substring(4, 6),
+            16
+        )
+
+    };
 
 }
 
@@ -145,11 +221,7 @@ function rgbToHex(
    RGB → HSL
 ================================= */
 
-function rgbToHsl(
-    r,
-    g,
-    b
-) {
+function rgbToHsl(r, g, b) {
 
     r /= 255;
     g /= 255;
@@ -256,11 +328,7 @@ function rgbToHsl(
    RGB → CMYK
 ================================= */
 
-function rgbToCmyk(
-    r,
-    g,
-    b
-) {
+function rgbToCmyk(r, g, b) {
 
     const R = r / 255;
     const G = g / 255;
@@ -276,9 +344,7 @@ function rgbToCmyk(
         );
 
 
-    if (
-        k >= 0.999999
-    ) {
+    if (k >= 0.999999) {
 
         return {
 
@@ -332,64 +398,71 @@ document
     .querySelectorAll(
         ".copy-button"
     )
-    .forEach(
-        button => {
+    .forEach(button => {
 
-            button.addEventListener(
-                "click",
-                async () => {
+        button.addEventListener(
+            "click",
+            async () => {
 
-                    const element =
-                        document.getElementById(
-                            button.dataset.copy
-                        );
-
-
-                    if (!element) {
-                        return;
-                    }
+                const element =
+                    document.getElementById(
+                        button.dataset.copy
+                    );
 
 
-                    try {
+                try {
 
-                        await navigator
-                            .clipboard
-                            .writeText(
-                                element.textContent
-                            );
+                    await navigator.clipboard.writeText(
+                        element.textContent
+                    );
 
 
-                        const oldText =
-                            button.textContent;
+                    const original =
+                        button.textContent;
 
 
-                        button.textContent =
-                            "✓";
+                    button.textContent =
+                        "✓";
 
 
-                        setTimeout(
-                            () => {
+                    setTimeout(
+                        () => {
 
-                                button.textContent =
-                                    oldText;
+                            button.textContent =
+                                original;
 
-                            },
-                            800
-                        );
-
-                    }
-
-                    catch (error) {
-
-                        console.error(
-                            "Copy failed:",
-                            error
-                        );
-
-                    }
+                        },
+                        800
+                    );
 
                 }
-            );
 
-        }
-    );
+                catch (error) {
+
+                    console.error(
+                        "Copy failed:",
+                        error
+                    );
+
+                }
+
+            }
+        );
+
+    });
+
+
+/* =================================
+   START
+================================= */
+
+/*
+ * Attempt to start automatically.
+ *
+ * NOTE:
+ * EyeDropper requires a user gesture,
+ * so the browser may reject this when
+ * the side panel is opened automatically.
+ */
+
+startPicker();
